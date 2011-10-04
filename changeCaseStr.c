@@ -1,3 +1,15 @@
+/*
+ * Author: Sean Barag
+ * Inspiration taken from Dr. Kandasamy's notes
+
+ * This program changes the case of the characters in a string in a child
+ * process, usings pipes to communicate.
+ *
+ * To compile:
+ *     $ gcc -std=c99 changeCaseStr changeCaseStr.c
+ * or use the included Makefile.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
