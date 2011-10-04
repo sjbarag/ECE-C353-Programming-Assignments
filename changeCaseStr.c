@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 	 */
 	if(argc == 1)
 	{
-		printf("USAGE: $ changeCaseStr text\n");
+		printf("USAGE: $ changeCaseStr 'text'\n");
 		return -1;
 	}
 
