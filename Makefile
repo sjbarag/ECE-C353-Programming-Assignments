@@ -1,9 +1,12 @@
 .PHONY: clean
 CC = gcc
 CFLAGS = -std=c99
-OUTFILE = changeCaseStr
+OUTFILE1 = changeCaseStr
+OUTFILE2 = sum
 
-${OUTFILE} : ${OUTFILE}.c
-	${CC} ${CFLAGS} -o $@ $?
+q1 : ${OUTFILE1}.c
+	${CC} ${CFLAGS} -o ${OUTFILE1} $?
+q2 : ${OUTFILE2}.c
+	${CC} ${CFLAGS} -o ${OUTFILE2} $? -lrt
 clean :
-	-rm -f ${OUTFILE}
+	-rm -f ${OUTFILE1} ${OUTFILE2}
