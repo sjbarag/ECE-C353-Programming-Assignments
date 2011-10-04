@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 	/* check for correct number of arguments.
 	 *   no need to declare anything if we're not going to run!
 	 */
-	if(argc == 1)
+	if(argc < 2)
 	{
 		printf("USAGE: $ changeCaseStr 'text'\n");
 		return -1;
