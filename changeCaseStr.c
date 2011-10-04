@@ -55,33 +55,44 @@ int main(int argc, char **argv)
 	}
 	else if(pid == 0)       /* if child */
 	{
-		printf("Child here!\n");
+		/* read from parent->child pipe */
 		n = read(fd_p2c[0], str, MAX_STRING_SIZE); // read n bytes from fd_p2c
 		close(fd_p2c[0]);
-		printf("Child: Got %d bytes from pipe.\n", n);
+		printf("[Child] \tGot %d bytes from pipe.\n", n);
 		str[n] = '\0'; // gotta null terminate!
 
+		/* change case; leaves non-alphabetic chars alone */
 		for( int i = 0; i < MAX_STRING_SIZE; i++)
 		{
 			if( str[i] == '\0' )
 				break;
 			if (str[i] >= 'a' && str[i] <= 'z')
-				printf("%c", toupper(str[i]) );
+				str[i] = toupper(str[i]);
 			else if (str[i] >= 'A' && str[i] <= 'Z')
-				printf("%c", tolower(str[i]) );
-			else
-				printf("%c", str[i] );
+				str[i] = tolower(str[i]);
 		}
-		printf("\n");
+
+		/* write to child->parent pipe */
+		write(fd_c2p[1], str, strlen(str));
+		close(fd_c2p[1]);
 		exit(0);
 	}
 
-	printf("Parent here!\n");
 	/* store from cmdline */
 	str = argv[1];
+
+	/* write to parent->child pipe */
 	write(fd_p2c[1], str, strlen(str));
 	close(fd_p2c[1]);
 
+	/* read from child->parent pipe */
+	n = read(fd_c2p[0], str, MAX_STRING_SIZE);
+	close(fd_c2p[0]);
+	printf("[Parent]\tGot %d bytes from pipe.\n", n);
+	str[n] = '\0'; // gotta null terminate!
+
+	/* print final output */
+	printf("[Parent]\tChanged case = %s\n", str);
+
 	exit(0);
 }
-
