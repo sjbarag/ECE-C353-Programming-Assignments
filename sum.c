@@ -95,7 +95,7 @@ int main(int argc, char **argv[])
 			write(fd_c2p[1], str, strlen(str));
 			printf("[Child] \tWrite to pipe complete\n");
 
-			printf("[Child] \tDone writing\n");
+			printf("[Child] \t--- Done writing ---\n");
 
 			/* reset */
 			a = 0;
@@ -126,7 +126,7 @@ int main(int argc, char **argv[])
 
 		/* write to shm */
 		strcpy(shared_msg, p_temp);
-		printf("shared_msg = '%s'\n", msg);
+		//printf("shared_msg = '%s'\n", msg);
 
 		/* write to pipe to synchronize processes */
 		str = "read";
@@ -138,6 +138,8 @@ int main(int argc, char **argv[])
 		printf("[Parent]\tSum: %s\n", shared_msg);
 
 		/* reset */
+		strcpy(shared_msg, "\0");
+		strcpy(p_temp, "\0");
 		//shared_msg = "";
 		//p_temp = "";
 	}
