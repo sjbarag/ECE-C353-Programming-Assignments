@@ -36,6 +36,7 @@ int main(int argc, char **argv[])
 		printf("Error in shm_open()!\n");
 		exit(-1);
 	}
+	ftruncate(fd, sizeof( char[MAX_MESSAGE_LENGTH] ) );
 	printf("Success in creating shared memory object at /dev/shm%s\n", SO_PATH);
 	char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
@@ -54,37 +55,52 @@ int main(int argc, char **argv[])
 	else if(pid == 0)       /* if child */
 	{
 		printf("[Child] \tForked correctly!\n");
-		char *comma;
-		int a, b;
+		int a, b, print_count;
 		char val;
 
-		/* read from pipe to synchronize processes */
-		printf("[Child] \tWaiting to read from pipe\n");
-		n = read(fd_p2c[0], str, MAX_FLAG_LENGTH);
-		if( strcmp(str, "read") == 0 )
-			printf("[Child] \tSignaled ready to read from shm.\n");
-
-		printf("[Child] \tshared_msg = %s\n", shared_msg);
-		/* read from shm */
-		if( shared_msg == NULL )
+		while(1)
 		{
-			printf("[Child] \tSHM is empty\n");
-			exit(-1);
+			/* read from pipe to synchronize processes */
+			printf("[Child] \tWaiting to read from pipe\n");
+			n = read(fd_p2c[0], str, MAX_FLAG_LENGTH);
+			if( strcmp(str, "read") == 0 )
+				printf("[Child] \tSignaled ready to read from shm.\n");
+
+			printf("[Child] \tshared_msg = %s\n", shared_msg);
+
+			if( shared_msg == NULL )
+			{
+				printf("[Child] \tSHM is empty\n");
+				exit(-1);
+			}
+
+			/* set a and b */
+			a = atoi(strtok(shared_msg, ","));
+			b = atoi(strtok(NULL, ","));
+
+			/* sum */
+			printf("[Child] \ta=%i\n",a);
+			printf("[Child] \tb=%i\n",b);
+			val = a+b;
+
+			/* write to shm */
+			print_count = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", val);
+			if (print_count <= 0)
+				printf("[Child] \tERROR PRINTING TO shared_msg.  Returned %i\n", print_count);
+
+			printf("[Child] \tWrite to shm complete\n");
+
+			/* write to pipe to synchronize processes */
+			str = "calc";
+			write(fd_c2p[1], str, strlen(str));
+			printf("[Child] \tWrite to pipe complete\n");
+
+			printf("[Child] \tDone writing\n");
+
+			/* reset */
+			a = 0;
+			b = 0;
 		}
-
-		/* set a and b */
-		a = atoi(strtok(shared_msg, ","));
-		b = atoi(strtok(NULL, ","));
-
-		/* sum */
-		printf("[Child] \ta=%i,a");
-		printf("[Child] \tb=%i,b");
-		//val = itoa(a+b);
-
-
-		str = "calc";
-		/* write to pipe to synchronize processes */
-		write(fd_c2p[1], str, strlen(str));
 	}
 
 	while(1)
@@ -109,16 +125,20 @@ int main(int argc, char **argv[])
 		strcat(p_temp, in_B);
 
 		/* write to shm */
-		strcpy(msg, p_temp);
-		printf("shared_msg->content = '%s'\n", msg);
+		strcpy(shared_msg, p_temp);
+		printf("shared_msg = '%s'\n", msg);
 
-		/* tell child */
+		/* write to pipe to synchronize processes */
 		str = "read";
 		write(fd_p2c[1], str, strlen(str));
 
 		/* wait for child */
-		printf("[Parent]\tWaiting for child");
+		printf("[Parent]\tWaiting for child\n");
 		read(fd_c2p[0], str, MAX_FLAG_LENGTH);
-		printf("[Parent]\tfrom pipe: %s\n",str);
+		printf("[Parent]\tSum: %s\n", shared_msg);
+
+		/* reset */
+		//shared_msg = "";
+		//p_temp = "";
 	}
 }
