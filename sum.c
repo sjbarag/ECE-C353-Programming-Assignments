@@ -8,16 +8,19 @@
 #include <string.h>
 //#include <time.h>
 #include <errno.h>
+#include <signal.h>
 
 #define SO_PATH "/sjb89_hw1-5"
 #define MAX_MESSAGE_LENGTH 50
 
+char *shared_msg;    // future home to mapping of shared memory
+int pid;             // process ID
 
-
+static void handle_sigint_parent(int signalNumber);
 
 int main(int argc, char **argv[])
 {
-	int fd, pid;                // file descriptor and process ID, respectively
+	int fd;                     // file descriptor
 
 	/* pipes */
 	int fd_p2c[2], fd_c2p[2];   // parent to child & child to parent file
@@ -59,10 +62,11 @@ int main(int argc, char **argv[])
 	}
 	else if(pid == 0)       /* if child */
 	{
+		printf("[Child] \t: Child PID = %i\n", pid);
 		int a, b, n_shm;      // sum components and number of bytes written
 
 		/* map shared memory! */
-		char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 		while(1)
 		{
@@ -97,6 +101,8 @@ int main(int argc, char **argv[])
 	}
 	else if(pid > 0) /* parent code */
 	{
+		if( signal(SIGINT, handle_sigint_parent) == SIG_ERR)
+			printf("Parent can not catch SIGINT. \n");
 		while(1)
 		{
 			/* map shared memory! */
@@ -139,4 +145,23 @@ int main(int argc, char **argv[])
 			strcpy(shared_msg, "\0");
 		}
 	}
+}
+static void handle_sigint_parent(int signalNumber)
+{
+	if( signalNumber == SIGINT )
+		printf("\nReceived ^C (Control+C)!\n");
+
+	/* unmap shared memory from parent's address space */
+	munmap(shared_msg, MAX_MESSAGE_LENGTH);
+
+	/* unlink shared memory object */
+	shm_unlink(SO_PATH);
+
+	/* kill all children (should be only one) */
+	printf("Killing child @ pid %i\n", pid);
+	kill(pid, SIGKILL);
+	printf("child killed\n");
+
+	/* exit */
+	exit(0);
 }
