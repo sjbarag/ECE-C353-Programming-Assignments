@@ -23,8 +23,6 @@ int main(int argc, char **argv[])
 	int n;                      // number of bytes read from a pipe
 
 	char in_A[MAX_MESSAGE_LENGTH/2], in_B[MAX_MESSAGE_LENGTH/2]; // inputs
-	char temp_data[MAX_MESSAGE_LENGTH];                          // where to store concatenated string
-	char *p_temp = temp_data;                                    // pointer to ^^^
 	int len;                                                     // used to strip newlines
 
 
@@ -127,14 +125,10 @@ int main(int argc, char **argv[])
 			if (in_B[len] == '\n')
 				in_B[len] = '\0';
 
-			/* form message */ //TODO: necessary? can probably just do this in shared_msg
-			strcpy(p_temp, in_A);
-			strcat(p_temp, ",");
-			strcat(p_temp, in_B);
-			printf("p_temp = '%s'\n", p_temp);
-
-			/* write to shm */
-			snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%s", p_temp);
+			/* build message in shm */
+			strcpy(shared_msg, in_A);
+			strcat(shared_msg, ",");
+			strcat(shared_msg, in_B);
 			printf("shared_msg = '%s'\n", shared_msg);
 
 			/* write to pipe to synchronize processes */
@@ -148,7 +142,6 @@ int main(int argc, char **argv[])
 
 			/* reset */
 			strcpy(shared_msg, "\0");
-			strcpy(p_temp, "\0");
 			//shared_msg = "";
 			//p_temp = "";
 		}
