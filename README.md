@@ -39,7 +39,7 @@ lOREM IpSuM DOLOr sit AMET!
 
 ```text
 $ ./out/sum
-Enter the first number:      1
+Enter the first number:         1
 Enter the second number:        73
 Sum:                            74
 
