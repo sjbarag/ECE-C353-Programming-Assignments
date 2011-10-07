@@ -62,7 +62,6 @@ int main(int argc, char **argv[])
 	}
 	else if(pid == 0)       /* if child */
 	{
-		printf("[Child] \t: Child PID = %i\n", pid);
 		int a, b, n_shm;      // sum components and number of bytes written
 
 		/* map shared memory! */
@@ -71,7 +70,6 @@ int main(int argc, char **argv[])
 		while(1)
 		{
 			/* read from pipe to synchronize processes */
-			errno = 0;
 			n_pipe = read(fd_p2c[0], &m, 1);
 			if ( n_pipe == -1 )
 			{
@@ -155,12 +153,13 @@ static void handle_sigint_parent(int signalNumber)
 	munmap(shared_msg, MAX_MESSAGE_LENGTH);
 
 	/* unlink shared memory object */
-	shm_unlink(SO_PATH);
+	if( shm_unlink(SO_PATH) == 0 )
+		printf("Shared memory object removed succesfully. :)\n");
 
 	/* kill all children (should be only one) */
 	printf("Killing child @ pid %i\n", pid);
 	kill(pid, SIGKILL);
-	printf("child killed\n");
+	printf("Child killed. Exiting.\n");
 
 	/* exit */
 	exit(0);
