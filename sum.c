@@ -20,20 +20,23 @@ int main(int argc, char **argv[])
 	int fd_p2c[2], fd_c2p[2];   // parent to child & child to parent file
 	                            // descriptors for pipes
 	char m;                     // pipe sync message
-	int n;                      // number of bytes read from a pipe
+	int n_pipe;                 // number of bytes read from a pipe
 
 	char in_A[MAX_MESSAGE_LENGTH/2], in_B[MAX_MESSAGE_LENGTH/2]; // inputs
 	int len;                                                     // used to strip newlines
 
 
+	/* create shm object */
 	fd = shm_open(SO_PATH, O_CREAT | O_EXCL | O_RDWR, S_IRWXU | S_IRWXG);
 	if (fd < 0)
 	{
 		printf("Error in shm_open()!\n");
 		exit(-1);
 	}
+
+	/* set size of shm */
 	ftruncate(fd, sizeof( char[MAX_MESSAGE_LENGTH] ) );
-	printf("Success in creating shared memory object at /dev/shm%s\n", SO_PATH);
+	printf("Success in creating shared memory object at /dev/shm%s\n", SO_PATH); // dbg
 
 
 	/* create pipes */
@@ -51,25 +54,26 @@ int main(int argc, char **argv[])
 	}
 	else if(pid == 0)       /* if child */
 	{
-		printf("[Child] \tForked correctly!\n");
-		int a, b, print_count;      // sum components and number of bytes written
-		int sum;                    // sum TODO: delete
+		printf("[Child] \tForked correctly!\n"); // dbg
+		int a, b, n_shm;      // sum components and number of bytes written
+
+		/* map shared memory! */
 		char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 		while(1)
 		{
 			/* read from pipe to synchronize processes */
-			printf("[Child] \tWaiting to read from pipe\n");
+			printf("[Child] \tWaiting to read from pipe\n"); // dbg
 			errno = 0;
-			n = read(fd_p2c[0], &m, 1);
-			printf("[Child] \tReceived %i bytes\n", n);
-			if ( n == -1 )
+			n_pipe = read(fd_p2c[0], &m, 1);
+			printf("[Child] \tReceived %i bytes\n", n_pipe); // dbg
+			if ( n_pipe == -1 )
 				printf("[Child] \tError reading from pipe: %s\n", strerror(errno));
 			/*str[n] = '\0';
 			if( strcmp(m, "r") == 0 )
 				printf("[Child] \tSignaled ready to read from shm.\n");*/
 
-			printf("[Child] \tshared_msg = %s\n", shared_msg);
+			printf("[Child] \tshared_msg = %s\n", shared_msg); // dbg
 
 			if( shared_msg == NULL )
 			{
@@ -81,23 +85,22 @@ int main(int argc, char **argv[])
 			a = atoi(strtok(shared_msg, ","));
 			b = atoi(strtok(NULL, ","));
 
-			/* sum */
+			/* dbg */
 			printf("[Child] \ta=%i\n",a);
 			printf("[Child] \tb=%i\n",b);
-			sum = a+b;
 
-			/* write to shm */
-			print_count = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", sum);
-			if (print_count <= 0)
-				printf("[Child] \tERROR PRINTING TO shared_msg.  Returned %i\n", print_count);
+			/* write sum to shm */
+			n_shm = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", a+b);
+			if (n_shm <= 0)
+				printf("[Child] \tError writing to shared_msg.  Returned %i\n", n_shm);
 
-			printf("[Child] \tWrite to shm complete\n");
+			printf("[Child] \tWrite to shm complete\n"); // dbg
 
 			/* write to pipe to synchronize processes */
 			write(fd_c2p[1], "c", 1);
-			printf("[Child] \tWrite to pipe complete\n");
+			printf("[Child] \tWrite to pipe complete\n"); // dbg
 
-			printf("[Child] \t--- Done writing ---\n");
+			printf("[Child] \t--- Done writing ---\n"); // dbg
 
 			/* reset */
 			a = 0;
@@ -129,21 +132,19 @@ int main(int argc, char **argv[])
 			strcpy(shared_msg, in_A);
 			strcat(shared_msg, ",");
 			strcat(shared_msg, in_B);
-			printf("shared_msg = '%s'\n", shared_msg);
+			printf("shared_msg = '%s'\n", shared_msg); // dbg
 
 			/* write to pipe to synchronize processes */
 			write(fd_p2c[1], "c", 1);
 
 			/* wait for child */
-			printf("[Parent]\tWaiting for child\n");
-			n = read(fd_c2p[0], &m, 1);
-			printf("[Parent]\tReceived %i bytes\n", n);
+			printf("[Parent]\tWaiting for child\n");  // dbg
+			n_pipe = read(fd_c2p[0], &m, 1);
+			printf("[Parent]\tReceived %i bytes\n", n_pipe); // dbg
 			printf("[Parent]\tSum: %s\n", shared_msg);
 
 			/* reset */
 			strcpy(shared_msg, "\0");
-			//shared_msg = "";
-			//p_temp = "";
 		}
 	}
 }
