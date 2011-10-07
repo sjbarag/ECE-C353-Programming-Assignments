@@ -12,6 +12,9 @@
 #define SO_PATH "/sjb89_hw1-5"
 #define MAX_MESSAGE_LENGTH 50
 
+
+
+
 int main(int argc, char **argv[])
 {
 	int fd, pid;                // file descriptor and process ID, respectively
@@ -23,14 +26,16 @@ int main(int argc, char **argv[])
 	int n_pipe;                 // number of bytes read from a pipe
 
 	char in_A[MAX_MESSAGE_LENGTH/2], in_B[MAX_MESSAGE_LENGTH/2]; // inputs
-	int len;                                                     // used to strip newlines
+	int len;                    // used to strip newlines
+	int errstr;                 // store errno if something happens
 
 
 	/* create shm object */
 	fd = shm_open(SO_PATH, O_CREAT | O_EXCL | O_RDWR, S_IRWXU | S_IRWXG);
 	if (fd < 0)
 	{
-		printf("Error in shm_open()!\n");
+		errstr = errno;
+		printf("Error in creating shared memory object: %s\nExiting.\n", strerror(errno));
 		exit(-1);
 	}
 
@@ -40,14 +45,16 @@ int main(int argc, char **argv[])
 	/* create pipes */
 	if( (pipe(fd_p2c) < 0) || (pipe(fd_c2p) < 0) )
 	{
-		printf("Error creating pipes.  Exiting.\n");
+		errstr = errno;
+		printf("Error creating pipes: %s\nExiting.\n", strerror(errno));
 		exit(-1);
 	}
 
 	/* fork! */
 	if( (pid = fork()) < 0)
 	{
-		printf("OH NOEZ!  Fork error.\n");
+		errstr = errno;
+		printf("OH NOEZ!  Fork error: %s\nExiting.\n", strerror(errno));
 		exit(-1);
 	}
 	else if(pid == 0)       /* if child */
@@ -63,12 +70,9 @@ int main(int argc, char **argv[])
 			errno = 0;
 			n_pipe = read(fd_p2c[0], &m, 1);
 			if ( n_pipe == -1 )
-				printf("[Child] \tError reading from pipe: %s\n", strerror(errno));
-
-			if( shared_msg == NULL )
 			{
-				printf("[Child] \tSHM is empty\n");
-				exit(-1);
+				errstr = errno;
+				printf("Error reading from pipe: %s\n", strerror(errstr));
 			}
 
 			/* set a and b */
@@ -78,7 +82,10 @@ int main(int argc, char **argv[])
 			/* write sum to shm */
 			n_shm = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", a+b);
 			if (n_shm <= 0)
-				printf("[Child] \tError writing to shared_msg.  Returned %i\n", n_shm);
+			{
+				errstr = errno;
+				printf("Error writing to shared_msg: %s\n", strerror(errstr));
+			}
 
 			/* write to pipe to synchronize processes */
 			write(fd_c2p[1], "c", 1);
@@ -119,6 +126,11 @@ int main(int argc, char **argv[])
 
 			/* wait for child */
 			n_pipe = read(fd_c2p[0], &m, 1);
+			if ( n_shm <= 0 )
+			{
+				errstr = errno;
+				printf("Error writing to pipe: %s\n", errstr);
+			}
 
 			/* print sum */
 			printf("Sum:                    \t%s\n\n", shared_msg);  // extra spaces because I'm anal with spacing.
