@@ -11,25 +11,21 @@
 
 #define SO_PATH "/sjb89_hw1-5"
 #define MAX_MESSAGE_LENGTH 50
-#define MAX_FLAG_LENGTH 10
 
 int main(int argc, char **argv[])
 {
-	int fd, pid;
-	char *msg;
+	int fd, pid;                // file descriptor and process ID, respectively
 
 	/* pipes */
 	int fd_p2c[2], fd_c2p[2];   // parent to child & child to parent file
 	                            // descriptors for pipes
-	char data[MAX_FLAG_LENGTH];
-	char *str = data;
-	char m;
-	int n;
+	char m;                     // pipe sync message
+	int n;                      // number of bytes read from a pipe
 
-	char in_A[MAX_MESSAGE_LENGTH/2], in_B[MAX_MESSAGE_LENGTH/2];
-	char temp_data[MAX_MESSAGE_LENGTH];
-	char *p_temp = temp_data;
-	int len;
+	char in_A[MAX_MESSAGE_LENGTH/2], in_B[MAX_MESSAGE_LENGTH/2]; // inputs
+	char temp_data[MAX_MESSAGE_LENGTH];                          // where to store concatenated string
+	char *p_temp = temp_data;                                    // pointer to ^^^
+	int len;                                                     // used to strip newlines
 
 
 	fd = shm_open(SO_PATH, O_CREAT | O_EXCL | O_RDWR, S_IRWXU | S_IRWXG);
@@ -42,14 +38,15 @@ int main(int argc, char **argv[])
 	printf("Success in creating shared memory object at /dev/shm%s\n", SO_PATH);
 
 
+	/* create pipes */
 	if( (pipe(fd_p2c) < 0) || (pipe(fd_c2p) < 0) )
 	{
 		printf("Error creating pipes.  Exiting.\n");
 		exit(-1);
 	}
 
-
-	if( (pid = fork()) < 0) /* fork a child! */
+	/* fork! */
+	if( (pid = fork()) < 0)
 	{
 		printf("OH NOEZ!  Fork error.\n");
 		exit(-1);
@@ -57,8 +54,8 @@ int main(int argc, char **argv[])
 	else if(pid == 0)       /* if child */
 	{
 		printf("[Child] \tForked correctly!\n");
-		int a, b, print_count;
-		int val;
+		int a, b, print_count;      // sum components and number of bytes written
+		int sum;                    // sum TODO: delete
 		char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 		while(1)
@@ -89,10 +86,10 @@ int main(int argc, char **argv[])
 			/* sum */
 			printf("[Child] \ta=%i\n",a);
 			printf("[Child] \tb=%i\n",b);
-			val = a+b;
+			sum = a+b;
 
 			/* write to shm */
-			print_count = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", val);
+			print_count = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", sum);
 			if (print_count <= 0)
 				printf("[Child] \tERROR PRINTING TO shared_msg.  Returned %i\n", print_count);
 
@@ -113,7 +110,9 @@ int main(int argc, char **argv[])
 	{
 		while(1)
 		{
+			/* map shared memory! */
 			char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
 			/* read numbers */
 			printf("Enter the first number:");
 			fgets(in_A, MAX_MESSAGE_LENGTH, stdin);
@@ -128,7 +127,7 @@ int main(int argc, char **argv[])
 			if (in_B[len] == '\n')
 				in_B[len] = '\0';
 
-			/* form message */
+			/* form message */ //TODO: necessary? can probably just do this in shared_msg
 			strcpy(p_temp, in_A);
 			strcat(p_temp, ",");
 			strcat(p_temp, in_B);
