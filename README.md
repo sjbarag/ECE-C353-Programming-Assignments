@@ -30,16 +30,20 @@ hand using the following commands:
 #### Example Output
 * For question one (change the case of a string using pipes):
 
-```./out/changeCaseStr 'Lorem iPsUm doloR SIT amet!'
-lOREM IpSuM DOLOr sit AMET!```
+```text
+./out/changeCaseStr 'Lorem iPsUm doloR SIT amet!'
+lOREM IpSuM DOLOr sit AMET!
+```
 
 * For question two (sum two numbers using shared memory):
 
-```Enter the first number:      1
+```text
+Enter the first number:      1
 Enter the second number:        73
 Sum:                            74
 
-... (repeats prompt)```
+... (repeats prompt)
+```
 
 #### Other
 The source code for this project (including this README) is available on
