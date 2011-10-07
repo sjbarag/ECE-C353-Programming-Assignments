@@ -126,7 +126,7 @@ int main(int argc, char **argv[])
 
 			/* wait for child */
 			n_pipe = read(fd_c2p[0], &m, 1);
-			if ( n_shm <= 0 )
+			if ( n_pipe <= 0 )
 			{
 				errstr = errno;
 				printf("Error writing to pipe: %s\n", errstr);
