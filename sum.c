@@ -36,8 +36,6 @@ int main(int argc, char **argv[])
 
 	/* set size of shm */
 	ftruncate(fd, sizeof( char[MAX_MESSAGE_LENGTH] ) );
-	printf("Success in creating shared memory object at /dev/shm%s\n", SO_PATH); // dbg
-
 
 	/* create pipes */
 	if( (pipe(fd_p2c) < 0) || (pipe(fd_c2p) < 0) )
@@ -54,7 +52,6 @@ int main(int argc, char **argv[])
 	}
 	else if(pid == 0)       /* if child */
 	{
-		printf("[Child] \tForked correctly!\n"); // dbg
 		int a, b, n_shm;      // sum components and number of bytes written
 
 		/* map shared memory! */
@@ -63,17 +60,10 @@ int main(int argc, char **argv[])
 		while(1)
 		{
 			/* read from pipe to synchronize processes */
-			printf("[Child] \tWaiting to read from pipe\n"); // dbg
 			errno = 0;
 			n_pipe = read(fd_p2c[0], &m, 1);
-			printf("[Child] \tReceived %i bytes\n", n_pipe); // dbg
 			if ( n_pipe == -1 )
 				printf("[Child] \tError reading from pipe: %s\n", strerror(errno));
-			/*str[n] = '\0';
-			if( strcmp(m, "r") == 0 )
-				printf("[Child] \tSignaled ready to read from shm.\n");*/
-
-			printf("[Child] \tshared_msg = %s\n", shared_msg); // dbg
 
 			if( shared_msg == NULL )
 			{
@@ -85,22 +75,13 @@ int main(int argc, char **argv[])
 			a = atoi(strtok(shared_msg, ","));
 			b = atoi(strtok(NULL, ","));
 
-			/* dbg */
-			printf("[Child] \ta=%i\n",a);
-			printf("[Child] \tb=%i\n",b);
-
 			/* write sum to shm */
 			n_shm = snprintf(shared_msg, MAX_MESSAGE_LENGTH+1, "%i", a+b);
 			if (n_shm <= 0)
 				printf("[Child] \tError writing to shared_msg.  Returned %i\n", n_shm);
 
-			printf("[Child] \tWrite to shm complete\n"); // dbg
-
 			/* write to pipe to synchronize processes */
 			write(fd_c2p[1], "c", 1);
-			printf("[Child] \tWrite to pipe complete\n"); // dbg
-
-			printf("[Child] \t--- Done writing ---\n"); // dbg
 
 			/* reset */
 			a = 0;
@@ -115,9 +96,9 @@ int main(int argc, char **argv[])
 			char *shared_msg = (char *)mmap(NULL, MAX_MESSAGE_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 			/* read numbers */
-			printf("Enter the first number:");
+			printf("Enter the first number: \t");
 			fgets(in_A, MAX_MESSAGE_LENGTH, stdin);
-			printf("Enter the second number:");
+			printf("Enter the second number:\t");
 			fgets(in_B, MAX_MESSAGE_LENGTH, stdin);
 
 			/* remove trailing newlines */
@@ -132,16 +113,15 @@ int main(int argc, char **argv[])
 			strcpy(shared_msg, in_A);
 			strcat(shared_msg, ",");
 			strcat(shared_msg, in_B);
-			printf("shared_msg = '%s'\n", shared_msg); // dbg
 
 			/* write to pipe to synchronize processes */
 			write(fd_p2c[1], "c", 1);
 
 			/* wait for child */
-			printf("[Parent]\tWaiting for child\n");  // dbg
 			n_pipe = read(fd_c2p[0], &m, 1);
-			printf("[Parent]\tReceived %i bytes\n", n_pipe); // dbg
-			printf("[Parent]\tSum: %s\n", shared_msg);
+
+			/* print sum */
+			printf("Sum:                    \t%s\n\n", shared_msg);  // extra spaces because I'm anal with spacing.
 
 			/* reset */
 			strcpy(shared_msg, "\0");
