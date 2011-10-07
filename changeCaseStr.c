@@ -58,7 +58,6 @@ int main(int argc, char **argv)
 		/* read from parent->child pipe */
 		n = read(fd_p2c[0], str, MAX_STRING_SIZE); // read n bytes from fd_p2c
 		close(fd_p2c[0]);
-		printf("[Child] \tGot %d bytes from pipe.\n", n);
 		str[n] = '\0'; // gotta null terminate!
 
 		/* change case; leaves non-alphabetic chars alone */
@@ -88,11 +87,10 @@ int main(int argc, char **argv)
 	/* read from child->parent pipe */
 	n = read(fd_c2p[0], str, MAX_STRING_SIZE);
 	close(fd_c2p[0]);
-	printf("[Parent]\tGot %d bytes from pipe.\n", n);
 	str[n] = '\0'; // gotta null terminate!
 
 	/* print final output */
-	printf("[Parent]\tChanged case = %s\n", str);
+	printf("%s\n", str);
 
 	exit(0);
 }
