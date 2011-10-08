@@ -4,9 +4,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define NUM_GENERATED  100000000 // total number of randomly generated floats
-#define NUM_THREADS_S1        25 // number of threads in stage one
-#define NUM_THREADS_S2         5 // number of threads in stage two
+#define NUM_GENERATED  5000000 // total number of randomly generated floats
+#define NUM_THREADS_S1      25 // number of threads in stage one
+#define NUM_THREADS_S2       5 // number of threads in stage two
 
 float data[NUM_GENERATED];  // array of floats to sum
 int NUM_TO_SUM_S1 = NUM_GENERATED / NUM_THREADS_S1;  // number of elements for
@@ -37,6 +37,8 @@ int main()
 
 	main_thread = pthread_self();  // get thread ID for calling thread
 	printf("Main thread = %u is creating %d worker threads \n", (int)main_thread, NUM_THREADS_S1);
+
+	printf("NUM_TO_SUM_S1 = %i\n", NUM_TO_SUM_S1);
 
 	/* -------------------- stage one -------------------- */
 
