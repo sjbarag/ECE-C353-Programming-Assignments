@@ -97,6 +97,51 @@ int main()
 	printf("Stage one complete!\n");
 
 	/* -------------------- stage two -------------------- */
+	printf("First 20:\n[ ");
+	for(int i = 0; i < 20; i++)
+		printf("%f, ", data[i]);
+	printf(" ]\n");
+
+	printf("----- Creating threads -----\n");
+	/* create threads for stage one */
+	for(int i = 0; i < NUM_THREADS_S2; i++)
+	{
+
+		/* allocate memory for the struct that contains each thread's args */
+		t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
+
+		/* fill args */
+		t_args->threadID   = i;
+		t_args->start_pos  = NUM_TO_SUM_S2 * i;
+		t_args->num_to_sum = NUM_TO_SUM_S2;
+
+		/* create thread */
+		if( (pthread_create( &s2_thread[i], NULL, partial_sum, (void *)t_args)) != 0 )
+		{
+			printf("Error: could not create thread!  Exiting.\n");
+			exit(0);
+		}
+	}
+	printf("Done creating threads\n");
+
+	/* wait for stage one threads to finish */
+	for(int i = 0; i < NUM_THREADS_S2; i++)
+		pthread_join( s2_thread[i], NULL );
+
+	printf("Stage two complete!\n");
+
+	/* -------------------- stage three -------------------- */
+	for(int i = 0; i < 5; i++)
+		t_sum += data[i];
+
+	printf("First 20:\n[ ");
+	for(int i = 0; i < 20; i++)
+		printf("%f, ", data[i]);
+	printf(" ]\n");
+
+	printf(" ------------------------------------\n");
+	printf("Sum via bruteforce = \t%f\n", long_sum);
+	printf("Sum via threading  = \t%f\n", t_sum);
 
 	pthread_exit( (void *)main_thread );
 }
