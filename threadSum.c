@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define NUM_GENERATED  5000000  // total number of randomly generated floats
+#define NUM_GENERATED  10000  // total number of randomly generated floats
 #define NUM_THREADS_S1      25  // number of threads in stage one
 #define NUM_THREADS_S2       5  // number of threads in stage two
 
@@ -50,10 +50,13 @@ int main()
 	printf("Generating random numbers between 0 and 1...\n\n");
 	for(int i = 0; i < NUM_GENERATED; i++)
 	{
-		raw_data[i] = (float)random()/(float)RAND_MAX;
-		long_sum += raw_data[i];
+		//raw_data[i] = (float)random()/(float)RAND_MAX;
+		raw_data[i] = i;
+	//	long_sum += raw_data[i];
 	}
 
+/*	for(int i = 0; i < NUM_GENERATED; i++)
+		long_sum = long_sum + raw_data[i];*/
 
 	main_thread = pthread_self();  // get thread ID for calling thread
 	/* -------------------- stage one -------------------- */
@@ -139,4 +142,7 @@ void *partial_sum(void *in_args)
 
 	for(int i = l_args->start_pos; i < (l_args->start_pos + l_args->num_to_sum); i++)
 		l_args->dst[ l_args->threadID ] += l_args->src[ i ];
+	printf("Thread: %i\tPost Sum: %f\nRange: %i-%i\n\n", l_args->threadID,
+		l_args->dst[ l_args->threadID ], l_args->start_pos,
+		l_args->start_pos+l_args->num_to_sum - 1);
 }
