@@ -77,9 +77,33 @@ int main()
 	for(int i = 0; i < NUM_THREADS_S1; i++)
 		pthread_join( s1_thread[i], NULL );
 
-	printf("Results of first round of threads:\n");
-	for(int i = 0; i < NUM_THREADS_S1; i++)
-		printf("%.1f\n", data_s1[i]);
+
+	/* stage 2 */
+	for(int i = 0; i < NUM_THREADS_S2; i++)
+	{
+		t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
+
+		t_args->threadID = i;
+		t_args->start = NUM_TO_SUM_S2 * i;
+		t_args->count = NUM_TO_SUM_S2;
+		t_args->src   = data_s1;
+		t_args->dst   = data_s2;
+
+		if( (pthread_create( &s2_thread[i], NULL, partial_sum, (void *)t_args)) != 0)
+		{
+			printf("Error: could not create thread! Exiting.\n");
+			exit(-1);
+		}
+	}
+
+	/* wait */
+	for(int i = 0; i < NUM_THREADS_S2; i++)
+		pthread_join( s2_thread[i], NULL );
+
+	printf("Results of second round of threads:\n");
+	for(int i = 0; i < NUM_THREADS_S2; i++)
+		printf("%.1f\n", data_s2[i]);
+
 
 	exit(0);
 }
