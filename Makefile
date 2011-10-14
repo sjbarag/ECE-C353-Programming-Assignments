@@ -2,7 +2,7 @@
 CC = gcc
 CFLAGS = -std=c99 -g
 OUTDIR = out/
-OUTFILE1 = threadSum
+OUTFILE1 = threadSum2
 OUTFILE2 = matrixMult
 
 default : q1 q2
