@@ -47,6 +47,13 @@ int main()
 
 	main_thread = pthread_self();
 
+	for(int i = 0; i < NUM_GENERATED; i++)
+		it_sum += data_s0[i];
+
+	printf("Iterated sum = %.1f\n", it_sum);
+
 	exit(0);
+
+	/* stage 1 */
 }
 
