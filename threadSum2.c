@@ -53,7 +53,6 @@ int main()
 	for(int i = 0; i < NUM_GENERATED; i++)
 		it_sum += data_s0[i];
 
-	printf("Iterated sum = %.1f\n", it_sum);
 
 	/* stage 1 */
 	for(int i = 0; i < NUM_THREADS_S1; i++)
@@ -100,18 +99,25 @@ int main()
 	for(int i = 0; i < NUM_THREADS_S2; i++)
 		pthread_join( s2_thread[i], NULL );
 
-	printf("Results of second round of threads:\n");
+
+	/* stage 3 */
 	for(int i = 0; i < NUM_THREADS_S2; i++)
-		printf("%.1f\n", data_s2[i]);
+		t_sum += data_s2[i];
+
+	printf("Iterated sum = \t%.1f\n", it_sum);
+	printf("Final sum =    \t%.1f\n", t_sum);
 
 
-	exit(0);
+	pthread_exit( (void *)main_thread);;
 }
 
 void *partial_sum(void *in_args)
 {
 	THREAD_ARGS *l_args = (THREAD_ARGS *)in_args;
+	float val = 0;
 
 	for(int i = l_args->start; i < (l_args->count + l_args->start); i++)
-		l_args->dst[ l_args->threadID ] += l_args->src[i];
+		val = val + l_args->src[i];
+	l_args->dst[ l_args->threadID ] = val;
+	pthread_exit(0);
 }
