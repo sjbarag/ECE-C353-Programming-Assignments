@@ -21,8 +21,8 @@ typedef struct thread_args
 	int start;
 	int count;
 
-	float *src;
-	float *dst;
+	double *src;
+	double *dst;
 } THREAD_ARGS;
 
 int main()
@@ -31,14 +31,14 @@ int main()
 	pthread_t s1_thread[NUM_THREADS_S1];
 	pthread_t s2_thread[NUM_THREADS_S2];
 
-	float *data_s0 = (float *)malloc(NUM_GENERATED * sizeof(float));
-	float *data_s1 = (float *)malloc(NUM_THREADS_S1 * sizeof(float));
-	float *data_s2 = (float *)malloc(NUM_THREADS_S2 * sizeof(float));
+	double *data_s0 = (double *)malloc(NUM_GENERATED * sizeof(double));
+	double *data_s1 = (double *)malloc(NUM_THREADS_S1 * sizeof(double));
+	double *data_s2 = (double *)malloc(NUM_THREADS_S2 * sizeof(double));
 
 	THREAD_ARGS *t_args;
 
-	float t_sum = 0;
-	float it_sum = 0;
+	double t_sum = 0;
+	double it_sum = 0;
 
 	srandom(time(NULL));
 
@@ -46,7 +46,7 @@ int main()
 	/* stage 0 */
 	printf("Generatinig random numbers between 0 and 1...\n\n");
 	for(int i = 0; i < NUM_GENERATED; i++)
-		data_s0[i] = (float)i;
+		data_s0[i] = (double)random() / RAND_MAX;
 
 	main_thread = pthread_self();
 
@@ -104,8 +104,8 @@ int main()
 	for(int i = 0; i < NUM_THREADS_S2; i++)
 		t_sum += data_s2[i];
 
-	printf("Iterated sum = \t%.1f\n", it_sum);
-	printf("Final sum =    \t%.1f\n", t_sum);
+	printf("Iterated sum = \t%f\n", it_sum);
+	printf("Final sum =    \t%f\n", t_sum);
 
 
 	pthread_exit( (void *)main_thread);;
@@ -114,7 +114,7 @@ int main()
 void *partial_sum(void *in_args)
 {
 	THREAD_ARGS *l_args = (THREAD_ARGS *)in_args;
-	float val = 0;
+	double val = 0;
 
 	for(int i = l_args->start; i < (l_args->count + l_args->start); i++)
 		val = val + l_args->src[i];
