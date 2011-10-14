@@ -9,6 +9,9 @@
 #define NUM_THREADS_S1     25
 #define NUM_THREADS_S2      5
 
+#define NUM_TO_SUM_S1  200000
+#define NUM_TO_SUM_S2       5
+
 
 void *partial_sum(void *);
 
@@ -52,8 +55,39 @@ int main()
 
 	printf("Iterated sum = %.1f\n", it_sum);
 
-	exit(0);
-
 	/* stage 1 */
+	for(int i = 0; i < NUM_THREADS_S1; i++)
+	{
+		t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
+
+		t_args->threadID = i;
+		t_args->start = NUM_TO_SUM_S1 * i;
+		t_args->count = NUM_TO_SUM_S1;
+		t_args->src   = data_s0;
+		t_args->dst   = data_s1;
+
+		if( (pthread_create( &s1_thread[i], NULL, partial_sum, (void *)t_args)) != 0)
+		{
+			printf("Error: could not create thread! Exiting.\n");
+			exit(-1);
+		}
+	}
+
+	/* wait */
+	for(int i = 0; i < NUM_THREADS_S1; i++)
+		pthread_join( s1_thread[i], NULL );
+
+	printf("Results of first round of threads:\n");
+	for(int i = 0; i < NUM_THREADS_S1; i++)
+		printf("%.1f\n", data_s1[i]);
+
+	exit(0);
 }
 
+void *partial_sum(void *in_args)
+{
+	THREAD_ARGS *l_args = (THREAD_ARGS *)in_args;
+
+	for(int i = l_args->start; i < (l_args->count + l_args->start); i++)
+		l_args->dst[ l_args->threadID ] += l_args->src[i];
+}
