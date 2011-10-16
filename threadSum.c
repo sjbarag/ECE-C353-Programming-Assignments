@@ -44,7 +44,7 @@ int main()
 
 
 	/* stage 0 */
-	printf("Generatinig random numbers between 0 and 1...\n\n");
+	printf("Generating random numbers between 0 and 1...\n\n");
 	for(int i = 0; i < NUM_GENERATED; i++)
 		data_s0[i] = (double)random() / RAND_MAX;
 
