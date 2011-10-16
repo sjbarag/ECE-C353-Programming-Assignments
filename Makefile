@@ -1,8 +1,8 @@
 .PHONY: clean cleanshm
 CC = gcc
-CFLAGS = -std=c99 -g
+CFLAGS = -std=c99
 OUTDIR = out/
-OUTFILE1 = threadSum2
+OUTFILE1 = threadSum
 OUTFILE2 = matrixMult
 
 default : q1 q2
