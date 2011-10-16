@@ -41,7 +41,6 @@ int main()
 
 	//fscanf(input, "ROWS %i", &numRows);
 	numCols = numRows;
-	printf("numRows: %i\n", numRows);
 	fgets(line, 64, input); // columns
 
 
@@ -104,25 +103,6 @@ int main()
 	}
 
 
-
-
-	/* print input */
-	printf("Read Data \n");
-	for(int row = 0; row < numRows; row++)
-	{
-		for(int col = 0; col < numCols; col++)
-			printf("%i\t", A[row][col]);
-		printf("\n");
-	}
-
-	for(int row = 0; row < numRows; row++)
-	{
-		for(int col = 0; col < numCols; col++)
-			printf("%i\t", B[row][col]);
-		printf("\n");
-	}
-
-
 	/* spawn threads */
 	for(int i = 0; i < numRows; i++)
 	{
@@ -148,7 +128,7 @@ int main()
 		for( int j = 0; j < numCols; j++)
 			pthread_join( thread_pool[i][j], NULL );
 
-	printf("Output:\n");
+	printf("Product:\n");
 	for(int row = 0; row < numRows; row++)
 	{
 		for(int col = 0; col < numCols; col++)
@@ -161,7 +141,6 @@ void *multValues(void *input_args)
 {
 	THREAD_ARGS *l_args = (THREAD_ARGS *)input_args;
 
-	printf("Running\n");
 	// cast and save local args
 	int i = l_args->i;
 	int j = l_args->j;
