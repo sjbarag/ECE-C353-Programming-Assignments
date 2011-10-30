@@ -5,7 +5,11 @@ SIG_TEXT="Scriptable output:"
 # reset data file
 echo "" > "$DATAFILE"
 
-for i in $(seq 1000000 1000000 100000000)
+for threads in 2 4 8 16
 do
-	out/histogram $i | grep "$SIG_TEXT" | sed "s/$SIG_TEXT\t //" >> data.txt
+	echo "Getting data for $threads threads..."
+	for elem in $(seq 1000000 1000000 100000000)
+	do
+		out/histogram $elem $threads | grep "$SIG_TEXT" | sed "s/$SIG_TEXT\t //" >> data$threads.txt
+	done
 done
