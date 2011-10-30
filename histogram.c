@@ -75,7 +75,8 @@ void run_test(int num_elements)
 	compute_gold(input_data, reference_histogram, num_elements, HISTOGRAM_SIZE);
 
 	gettimeofday(&stop, NULL);
-	printf("CPU run time (reference) = %0.2f s. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	float ref_time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+	printf("CPU run time (reference) = %0.2f s. \n", ref_time);
 	//check_histogram(reference_histogram, num_elements, HISTOGRAM_SIZE);
 
 	// Compute the histogram using pthreads. The result histogram should be stored on the histogram_using_pthreads array
@@ -87,7 +88,8 @@ void run_test(int num_elements)
 	//check_histogram(histogram_using_pthreads, num_elements, HISTOGRAM_SIZE);
 
 	gettimeofday(&stop, NULL);
-	printf("CPU run time (thread)    = %0.2f s. \n\n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	float thread_time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+	printf("CPU run time (thread)    = %0.2f s. \n\n", thread_time);
 
 	// Compute the differences between the reference and pthread results
 	diff = 0.0;
@@ -95,6 +97,8 @@ void run_test(int num_elements)
 		diff = diff + abs(reference_histogram[i] - histogram_using_pthreads[i]);
 
 	printf("Difference between the reference and pthread results: %f. \n", diff);
+
+	printf("Scriptable output:\t %d \t %0.2f \t %0.2f \n", num_elements, ref_time, thread_time);
 
 	// cleanup memory
 	free(input_data);
