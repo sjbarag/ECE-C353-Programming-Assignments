@@ -16,7 +16,6 @@ void *do_histogram(void *);
 void check_histogram(int *, int, int);
 
 #define HISTOGRAM_SIZE 500
-#define NUM_THREADS 8
 
 
 /* structure for thread arguments */
@@ -34,17 +33,25 @@ typedef struct thread_args
 /* semaphore for the main histogram */
 sem_t sem_histogram;
 
+/* number of threads to create */
+int num_threads = 8;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
 int
 main( int argc, char** argv)
 {
-	if(argc != 2){
-		printf("Usage: histogram <num elements> \n");
+	if(argc != 2 && argc != 3){
+		printf("Usage: histogram <num elements> [num threads]\n");
 		exit(0);
 	}
 	int num_elements = atoi(argv[1]);
+
+	/* get number of threads from argv */
+	if(argc == 3)
+		num_threads = atoi(argv[2]);
+
 	run_test(num_elements);
 	return 0;
 }
@@ -81,7 +88,7 @@ void run_test(int num_elements)
 
 	// Compute the histogram using pthreads. The result histogram should be stored on the histogram_using_pthreads array
 	printf("\n");
-	printf("Creating histogram using pthreads. \n");
+	printf("Creating histogram using %d pthreads. \n", num_threads);
 
 	gettimeofday(&start, NULL);
 	compute_using_pthreads(input_data, histogram_using_pthreads, num_elements, HISTOGRAM_SIZE);
@@ -127,27 +134,27 @@ void compute_gold(int *input_data, int *histogram, int num_elements, int histogr
 void compute_using_pthreads(int *input_data, int *histogram, int num_elements, int histogram_size)
 {
 	int num_per_thread;
-	int mod = num_elements % 8;
-	num_per_thread = (num_elements - mod)/8;
+	int mod = num_elements % num_threads;
+	num_per_thread = (num_elements - mod)/num_threads;
 
 	THREAD_ARGS *t_args;	// reusable thread arguments structure
 
-	pthread_t thread[NUM_THREADS];
+	pthread_t thread[num_threads];
 
 	/* create semaphore for the histogram */
 	sem_init(&sem_histogram, 0, 1);
 
 	/* create two-dimensional array of buffer histograms */
-	int **buffer = (int **)malloc(NUM_THREADS * sizeof(int *));
-	for( int i = 0; i < NUM_THREADS; i++ )
+	int **buffer = (int **)malloc(num_threads * sizeof(int *));
+	for( int i = 0; i < num_threads; i++ )
 		buffer[i] = (int *)malloc(histogram_size * sizeof(int));
 
 	/* fill with all zeros */
-	for( int i = 0; i < NUM_THREADS; i++ )
+	for( int i = 0; i < num_threads; i++ )
 		for( int j = 0; j < histogram_size; j++ )
 			buffer[i][j] = 0;
 
-	for(int i = 0; i < NUM_THREADS; i++)
+	for(int i = 0; i < num_threads; i++)
 	{
 		/* allocate new args structure */
 		t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
@@ -157,8 +164,8 @@ void compute_using_pthreads(int *input_data, int *histogram, int num_elements, i
 		t_args->start = num_per_thread * i;
 		/* set number of elements.
 		 * the last thread should handle the elements that remain from a
-		 *   non-multiple of 8 input */
-		t_args->count = (i == (NUM_THREADS - 1) ? (num_per_thread + mod) : num_per_thread);
+		 *   non-multiple of num_threads input */
+		t_args->count = (i == (num_threads - 1) ? (num_per_thread + mod) : num_per_thread);
 
 		t_args->src = input_data;
 		t_args->dst = histogram;
@@ -173,7 +180,7 @@ void compute_using_pthreads(int *input_data, int *histogram, int num_elements, i
 	}
 
 	/* wait for all threads to return before proceeding */
-	for(int i = 0; i < NUM_THREADS; i++)
+	for(int i = 0; i < num_threads; i++)
 		pthread_join( thread[i], NULL );
 }
 
