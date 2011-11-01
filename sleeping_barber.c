@@ -63,11 +63,16 @@ int main(int argc, char **argv){
     numCustomers = MAX_NUM_CUSTOMERS;
   }
 
-  /* Initialize the semaphores */
-  sem_init(&waitingRoom, 0, numWaitingChairs);
-  sem_init(&barberSeat, 0, 1);
-  sem_init(&doneWithCustomer, 0, 0);
-  sem_init(&barberBed, 0, 0);
+  /* initialize the conditions */
+  pthread_cond_init( &seats_available, NULL );
+  pthread_cond_init( &barber_free, NULL );
+  pthread_cond_init( &wake_up, NULL );
+  pthread_cond_init( &done_cut, NULL );
+
+  /* initialize the mutexes */
+  pthread_mutex_init( &barber_chair, NULL );
+  pthread_mutex_init( &number_seats, NULL );
+  pthread_mutex_init( &bed, NULL );
 
   pthread_t btid; // ID for the barber thread
   pthread_t tid[MAX_NUM_CUSTOMERS]; // IDs for customer threads
