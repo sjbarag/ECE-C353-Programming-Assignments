@@ -1,11 +1,11 @@
-/* 
-   This code illustrates the sleeping barber problem. Compile as 
+/*
+   This code illustrates the sleeping barber problem. Compile as
    follows:
    gcc -o sleeping_barber -std=c99 sleeping_barber.c -lpthread -lm -lrt
 
    Usage:
    sleeping_barber <customers> <chairs>
-   Example: sleeping_barber 10 5; means: there are 10 customers and 5 waiting chairs in the 
+   Example: sleeping_barber 10 5; means: there are 10 customers and 5 waiting chairs in the
    barber shop
 
 */
@@ -26,8 +26,27 @@
 #define MAX_NUM_CUSTOMERS 50
 
 void *customer(void *num); // Prototype for customer thread
-void *barber(void *); // Prototype of barber thread 
+void *barber(void *); // Prototype of barber thread
 int UD(int, int); // Random number generator
+
+typedef struct empty_seat_element {
+	pthread_mutex_t *mutex;
+	empty_seat_struct *next;
+} empty_seat;
+
+void add_seat(int i, empty_seat *seat, empty_seat *free_seats)
+{
+	seat->mutex = seats[i];
+	seat->next = free_seats;
+}
+
+void delete_seat(empty_seat *free_seats)
+{
+	free_seats = free_seats->next;
+}
+
+
+
 
 
 /* Definition of semaphores */
@@ -50,13 +69,13 @@ int main(int argc, char **argv){
   int numWaitingChairs = atoi(argv[2]); // Number of waiting chairs in the barber shop
 
   srand((long)time(NULL)); /* Initialize randomizer */
- 
+
   if(numCustomers > MAX_NUM_CUSTOMERS){
     printf("Number of customers exceeds the maximum capacity of the barber \n");
     printf("Resetting the number of customers to %d \n", (int)MAX_NUM_CUSTOMERS);
     numCustomers = MAX_NUM_CUSTOMERS;
   }
-  
+
   /* Initialize the semaphores */
   sem_init(&waitingRoom, 0, numWaitingChairs);
   sem_init(&barberSeat, 0, 1);
@@ -67,7 +86,7 @@ int main(int argc, char **argv){
   pthread_t tid[MAX_NUM_CUSTOMERS]; // IDs for customer threads
 
   /* Create barber thread */
-  pthread_create(&btid, 0, barber, 0); 
+  pthread_create(&btid, 0, barber, 0);
 
   /* Create customer threads and give each an ID */
   int customerID[MAX_NUM_CUSTOMERS]; // Customer IDs
@@ -76,7 +95,7 @@ int main(int argc, char **argv){
     customerID[i] = i;
     pthread_create(&tid[i], 0, customer, &customerID[i]);
   }
-  
+
   for(i = 0; i < numCustomers; i++)
     pthread_join(tid[i], 0);
 
@@ -89,13 +108,14 @@ void *barber(void *arg){
 
   while(!doneWithAllCustomers){ // Customers remain to be serviced
     printf("Barber: Sleeping \n");
-    sem_wait(&barberBed);
+	pthread_cond_wait( customer_waiting, being_served );
 
     if(!doneWithAllCustomers){
-      printf("Barber: Cutting hair \n");
+      printf("Barber: Cutting hair \n")
       int waitTime = UD(MIN_TIME, MAX_TIME); // Simulate cutting hair
       sleep(waitTime);
-      sem_post(&doneWithCustomer); // Indicate that chair is free
+
+	  pthread_cond_broadcast( available ); // indicate that chair is free
     }
     else{
       printf("Barber: Done for the day. Going home \n");
@@ -110,6 +130,7 @@ void *customer(void *customerNumber){
   sleep(waitTime);
   printf("Customer %d: Arrived at the barber shop \n", number);
 
+	pthread_cond_wait( seat_available, free_seat );
   sem_wait(&waitingRoom); // Wait to get into the barber shop
   printf("Customer %d: Entering waiting room \n", number);
 
