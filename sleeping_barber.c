@@ -34,10 +34,16 @@ typedef struct empty_seat_element {
 	empty_seat_struct *next;
 } empty_seat;
 
-void add_seat(int i, empty_seat *seat, empty_seat *free_seats)
+void add_seat(empty_seat *seat, empty_seat *free_seats)
 {
-	seat->mutex = seats[i];
-	seat->next = free_seats;
+	empty_seat tmp = free_seats;
+
+	while( tmp->next != NULL )
+		tmp = free_seats->next;
+
+	/* seat->mutex = new mutex */
+	seat->next = NULL;
+	free_seats->next = seat;
 }
 
 void delete_seat(empty_seat *free_seats)
