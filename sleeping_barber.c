@@ -43,7 +43,7 @@ pthread_mutex_t bed;            /* the barber's bed.
                                    there's no contention for this, so probably
                                    unneeded. */
 
-int doneWithAllCustomers = FALSE; // Flag indicating the barber can go home
+int done_with_all_customers = FALSE; // Flag indicating the barber can go home
 
 int main(int argc, char **argv){
 
@@ -81,28 +81,28 @@ int main(int argc, char **argv){
   pthread_create(&btid, 0, barber, 0);
 
   /* Create customer threads and give each an ID */
-  int customerID[MAX_NUM_CUSTOMERS]; // Customer IDs
+  int customer_ID[MAX_NUM_CUSTOMERS]; // Customer IDs
   int i;
   for(i = 0; i < num_customers; i++){
-    customerID[i] = i;
-    pthread_create(&tid[i], 0, customer, &customerID[i]);
+    customer_ID[i] = i;
+    pthread_create(&tid[i], 0, customer, &customer_ID[i]);
   }
 
   for(i = 0; i < num_customers; i++)
     pthread_join(tid[i], 0);
 
-  doneWithAllCustomers = TRUE;
+  done_with_all_customers = TRUE;
   pthread_signal( &wake_up ); // wake up barber
   pthread_join(btid, 0);
 }
 
 void *barber(void *arg){
 
-  while(!doneWithAllCustomers){ // Customers remain to be serviced
+  while(!done_with_all_customers){ // Customers remain to be serviced
     printf("Barber: Sleeping \n");
     pthead_cond_wait( &wake_up, &bed ); // wait for someone to wake him up
 
-    if(!doneWithAllCustomers){
+    if(!done_with_all_customers){
       printf("Barber: Cutting hair \n");
       int waitTime = UD(MIN_TIME, MAX_TIME); // Simulate cutting hair
       sleep(waitTime);
