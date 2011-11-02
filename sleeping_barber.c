@@ -52,15 +52,15 @@ int main(int argc, char **argv){
     exit(0);
   }
 
-  int numCustomers = atoi(argv[1]); // Number of customers
+  int num_customers = atoi(argv[1]); // Number of customers
   int numWaitingChairs = atoi(argv[2]); // Number of waiting chairs in the barber shop
 
   srand((long)time(NULL)); /* Initialize randomizer */
 
-  if(numCustomers > MAX_NUM_CUSTOMERS){
+  if(num_customers > MAX_NUM_CUSTOMERS){
     printf("Number of customers exceeds the maximum capacity of the barber \n");
     printf("Resetting the number of customers to %d \n", (int)MAX_NUM_CUSTOMERS);
-    numCustomers = MAX_NUM_CUSTOMERS;
+    num_customers = MAX_NUM_CUSTOMERS;
   }
 
   /* initialize the conditions */
@@ -83,12 +83,12 @@ int main(int argc, char **argv){
   /* Create customer threads and give each an ID */
   int customerID[MAX_NUM_CUSTOMERS]; // Customer IDs
   int i;
-  for(i = 0; i < numCustomers; i++){
+  for(i = 0; i < num_customers; i++){
     customerID[i] = i;
     pthread_create(&tid[i], 0, customer, &customerID[i]);
   }
 
-  for(i = 0; i < numCustomers; i++)
+  for(i = 0; i < num_customers; i++)
     pthread_join(tid[i], 0);
 
   doneWithAllCustomers = TRUE;
@@ -142,7 +142,3 @@ void *customer(void *customerNumber){
 int UD(int min, int max){
   return((int)floor((double)(min + (max - min + 1)*((float)rand()/(float)RAND_MAX))));
 }
-
-
-
-
