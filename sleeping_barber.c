@@ -92,7 +92,7 @@ int main(int argc, char **argv){
     pthread_join(tid[i], 0);
 
   doneWithAllCustomers = TRUE;
-  sem_post(&barberBed); // Wake up barber
+  pthread_signal( &wake_up ); // wake up barber
   pthread_join(btid, 0);
 }
 
@@ -100,13 +100,14 @@ void *barber(void *arg){
 
   while(!doneWithAllCustomers){ // Customers remain to be serviced
     printf("Barber: Sleeping \n");
-    sem_wait(&barberBed);
+    pthead_cond_wait( &wake_up, &bed ); // wait for someone to wake him up
 
     if(!doneWithAllCustomers){
       printf("Barber: Cutting hair \n");
       int waitTime = UD(MIN_TIME, MAX_TIME); // Simulate cutting hair
       sleep(waitTime);
-      sem_post(&doneWithCustomer); // Indicate that chair is free
+      pthread_signal( &done_cut ); // tell customer to get up and get out
+      pthread_mutex_lock( &bed ); // lock bed again?
     }
     else{
       printf("Barber: Done for the day. Going home \n");
@@ -121,15 +122,17 @@ void *customer(void *customerNumber){
   sleep(waitTime);
   printf("Customer %d: Arrived at the barber shop \n", number);
 
-  sem_wait(&waitingRoom); // Wait to get into the barber shop
+  pthread_cond_wait( &seats_available, NULL ); // wait to get into shop
   printf("Customer %d: Entering waiting room \n", number);
 
-  sem_wait(&barberSeat); // Wait for the barber to become free
-  sem_post(&waitingRoom); // Let people waiting outside the shop know
+  pthread_cond_wait( &barber_free, &number_seats ); // wait for free barber
+  number_seats++;
+  pthread_signal( &seats_available ); // tell outsiders that a seat opened
 
-  sem_post(&barberBed); // Wake up barber
-  sem_wait(&doneWithCustomer); // Wait until hair is cut
-  sem_post(&barberSeat); // Give up seat
+  pthread_signal( &wake_up ); // wake up barber
+  pthread_mutex_lock( &barber_chair );
+  pthread_cond_wait( &done_cut, &barber_chair ); // wait until hair is cut
+  pthread_signal( &barber_free ); // tell others that the barber is free
 
   printf("Customer %d: Going home \n", number);
 }
