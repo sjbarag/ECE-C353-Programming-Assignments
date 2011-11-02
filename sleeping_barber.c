@@ -53,7 +53,7 @@ int main(int argc, char **argv){
   }
 
   int num_customers = atoi(argv[1]); // Number of customers
-  int numWaitingChairs = atoi(argv[2]); // Number of waiting chairs in the barber shop
+  int num_waiting_chairs = atoi(argv[2]); // Number of waiting chairs in the barber shop
 
   srand((long)time(NULL)); /* Initialize randomizer */
 
