@@ -178,23 +178,32 @@ void *customer(void *customerNumber){
 	else
 	{
 		pthread_mutex_unlock( &barber_state );
+		printf("Customer %d: waiting for chair \n", number);
 		pthread_mutex_lock( &barber_chair );
+		printf("Customer %d: has the chair \n", number);
 		pthread_cond_wait( &barber_free, &barber_chair ); // wait for free barber
+		printf("Customer %d: Chair taken \n", number);
+
+		/* check number of seats */
+		printf("Customer %d: giving up seat \n", number);
+		pthread_mutex_lock( &number_seats );
+		if( num_waiting_chairs == 0 )
+		{
+			pthread_cond_broadcast( &seats_available ); // tell outsiders only if they're waiting
+			printf("Customer %d: told outsiders \n", number);
+		}
+
+		/* free your seat */
+		num_waiting_chairs++;
+		printf("Customer %d: seat relinquished \n", number);
+		pthread_mutex_unlock( &number_seats ); // unlock mutex so others can check seats
+
+		/* wake him up */
+		printf("Customer %d: Waking barber! \n", number);
+		pthread_cond_signal( &wake_up ); // wake him up!
 	}
 
-	/* check number of seats */
-	printf("Customer %d: giving up seat \n", number);
-	pthread_mutex_lock( &number_seats );
-	if( num_waiting_chairs == 0 )
-	{
-		pthread_cond_broadcast( &seats_available ); // tell outsiders only if they're waiting
-		printf("Customer %d: told outsiders \n", number);
-	}
 
-	/* free your seat */
-	num_waiting_chairs++;
-	printf("Customer %d: seat relinquished \n", number);
-	pthread_mutex_unlock( &number_seats ); // unlock mutex so others can check seats
 
 	/* --- customer now has the barber's chair --- */
 	printf("Customer %d: Getting cut \n", number);
@@ -203,8 +212,10 @@ void *customer(void *customerNumber){
 	pthread_mutex_unlock( &finished ); // finished isn't really needed, so dump it
 	printf("Customer %d: Going home \n", number);
 
-	pthread_cond_broadcast( &barber_free ); // tell others barber is free
 	pthread_mutex_unlock( &barber_chair ); // unlock mutex so someone can get service
+	pthread_cond_broadcast( &barber_free ); // tell others barber is free
+	printf("Customer %d: Others told! \n", number);
+
 }
 
 
