@@ -28,8 +28,7 @@
 void *customer(void *num); // Prototype for customer thread
 void *barber(void *); // Prototype of barber thread
 int UD(int, int); // Random number generator
-int num_waiting_chairs; // number of empty seats in waiting room
-int barber_sleeping;
+
 
 /* definition of conditions */
 pthread_cond_t seats_available; /* seats in the waiting room are available */
@@ -41,13 +40,14 @@ pthread_cond_t done_cut;        /* tells the current customer that the haircut
 /* definition of mutexes */
 pthread_mutex_t barber_chair;   /* the barber's chair */
 pthread_mutex_t number_seats;   /* mutex protecting the number of seats */
-pthread_mutex_t bed;            /* the barber's bed.
-                                   there's no contention for this, so probably
-                                   unneeded. */
 pthread_mutex_t finished;       /* finished customer */
 pthread_mutex_t barber_state;   /* protects bool of barber's state */
 
 int done_with_all_customers = FALSE; // Flag indicating the barber can go home
+int num_waiting_chairs; // number of empty seats in waiting room
+int barber_sleeping = TRUE;
+int b_chair_taken = FALSE;
+int all_done = FALSE;
 
 int main(int argc, char **argv){
 
@@ -76,7 +76,6 @@ int main(int argc, char **argv){
 	/* initialize the mutexes */
 	pthread_mutex_init( &barber_chair, NULL );
 	pthread_mutex_init( &number_seats, NULL );
-	pthread_mutex_init( &bed, NULL );
 	pthread_mutex_init( &finished, NULL );
 	pthread_mutex_init( &barber_state, NULL );
 
@@ -103,16 +102,10 @@ int main(int argc, char **argv){
 }
 
 void *barber(void *arg){
-	pthread_mutex_lock( &barber_state);
-	barber_sleeping = TRUE;
-	pthread_mutex_unlock( &barber_state);
-
-
 	while(!done_with_all_customers){ // Customers remain to be serviced
-	printf("Barber: Sleeping \n");
+		printf("Barber: Sleeping \n");
 		pthread_mutex_lock( &barber_state );
-		pthread_cond_wait( &wake_up, &barber_state ); // wait for someone to wake him up
-		barber_sleeping = FALSE;
+		pthread_cond_wait( &wake_up, &barber_state );
 		pthread_mutex_unlock( &barber_state );
 
 		if(!done_with_all_customers){
@@ -120,10 +113,8 @@ void *barber(void *arg){
 			int waitTime = UD(MIN_TIME, MAX_TIME); // Simulate cutting hair
 			sleep(waitTime);
 			printf("Barber: Done cut \n");
-			pthread_cond_signal( &done_cut ); // tell customer to get up and get out
-			pthread_mutex_lock( &barber_state );	 // lock bed again
-			barber_sleeping = TRUE;
-			pthread_mutex_unlock( &barber_state );
+			/* indicate that haircut is over */
+			pthread_cond_signal( &done_cut );
 		}
 		else{
 			printf("Barber: Done for the day. Going home \n");
@@ -138,84 +129,45 @@ void *customer(void *customerNumber){
 	sleep(waitTime);
 	printf("Customer %d: Arrived at the barber shop \n", number);
 
-
-
-	/* check number of seats */
-	pthread_mutex_lock( &number_seats ); // lock number of seats
-	if( num_waiting_chairs == 0 ) // if no seats available
-		pthread_cond_wait( &seats_available, &number_seats ); // wait for a free seat
+	/* wait to get into the barber shop */
+	pthread_mutex_lock( &number_seats );
+	if( num_waiting_chairs == 0 )
+		pthread_cond_wait( &seats_available, &number_seats);
+	num_waiting_chairs--;
+	pthread_mutex_unlock( &number_seats );
 	printf("Customer %d: Entering waiting room \n", number);
 
-	/* take one seat */
-	num_waiting_chairs--;
-	pthread_mutex_unlock( &number_seats ); // unlock mutex so others can check seats
+	/* wait for the barber to become free */
+	pthread_mutex_lock( &barber_chair );
+	if( b_chair_taken )
+		pthread_cond_wait( &barber_free, &barber_chair );
+	b_chair_taken = TRUE;
+	pthread_mutex_unlock( &barber_chair );
 
-	/* --- customer now has a seat --- */
+	/* let people waiting outside the shop know */
+	pthread_mutex_lock( &number_seats );
+	num_waiting_chairs++;
+	pthread_mutex_unlock( &number_seats );
+	pthread_cond_signal( &seats_available );
 
-	/* check barber's state */
-	pthread_mutex_lock( &barber_state );
-	printf("Customer %d: Checking barber state \n", number);
-	if( barber_sleeping )
-	{
-		printf("Customer %d: He sleepin, yo \n", number);
-		/* check number of seats */
-		pthread_mutex_lock( &number_seats );
-		if( num_waiting_chairs == 0 )
-			pthread_cond_broadcast( &seats_available ); // tell outsiders only if they're waiting
+	/* wake up barber */
+	pthread_cond_signal( &wake_up );
 
-		/* free your seat */
-		num_waiting_chairs++;
-		pthread_mutex_unlock( &number_seats ); // unlock mutex so others can check seats
-
-
-		printf("Customer %d: Waking barber! \n", number);
-		pthread_cond_signal( &wake_up ); // wake him up!
-		pthread_mutex_unlock( &barber_state ); // unlock so barber can change his state
-		printf("Customer %d: Taking chair \n", number);
-		pthread_mutex_lock( &barber_chair ); // take barber chair
-		printf("Customer %d: Chair taken \n", number);
-	}
-	else
-	{
-		pthread_mutex_unlock( &barber_state );
-		printf("Customer %d: waiting for chair \n", number);
-		pthread_mutex_lock( &barber_chair );
-		printf("Customer %d: has the chair \n", number);
-		pthread_cond_wait( &barber_free, &barber_chair ); // wait for free barber
-		printf("Customer %d: Chair taken \n", number);
-
-		/* check number of seats */
-		printf("Customer %d: giving up seat \n", number);
-		pthread_mutex_lock( &number_seats );
-		if( num_waiting_chairs == 0 )
-		{
-			pthread_cond_broadcast( &seats_available ); // tell outsiders only if they're waiting
-			printf("Customer %d: told outsiders \n", number);
-		}
-
-		/* free your seat */
-		num_waiting_chairs++;
-		printf("Customer %d: seat relinquished \n", number);
-		pthread_mutex_unlock( &number_seats ); // unlock mutex so others can check seats
-
-		/* wake him up */
-		printf("Customer %d: Waking barber! \n", number);
-		pthread_cond_signal( &wake_up ); // wake him up!
-	}
-
-
-
-	/* --- customer now has the barber's chair --- */
+	/* wait until hair is cut */
 	printf("Customer %d: Getting cut \n", number);
 	pthread_mutex_lock( &finished );
-	pthread_cond_wait( &done_cut, &finished ); // wait for cut to finish
-	pthread_mutex_unlock( &finished ); // finished isn't really needed, so dump it
+	if( !all_done );
+		pthread_cond_wait( &done_cut, &finished );
+	all_done = FALSE; // reset for next dude
+	pthread_mutex_unlock( &finished );
+
+	/* give up barber chair */
+	pthread_mutex_lock( &barber_chair );
+	b_chair_taken = FALSE;
+	pthread_mutex_unlock( &barber_chair );
+	pthread_cond_signal( &barber_free );
+
 	printf("Customer %d: Going home \n", number);
-
-	pthread_mutex_unlock( &barber_chair ); // unlock mutex so someone can get service
-	pthread_cond_broadcast( &barber_free ); // tell others barber is free
-	printf("Customer %d: Others told! \n", number);
-
 }
 
 
