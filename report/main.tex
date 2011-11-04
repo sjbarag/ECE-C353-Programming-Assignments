@@ -4,6 +4,10 @@
 \usepackage{listings}
 \usepackage[margin=1in]{geometry}
 \usepackage{xcolor}
+\usepackage{gnuplot-lua-tikz}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{siunitx}
 
 \lstset{
 	language=C,
@@ -128,5 +132,44 @@ is obtained, and the lock is immediately released when it is no longer needed.
 Finally, each thread exits when it has successfully released~(via
 \ttt{sem\_post}) the lock on the shared histogram.
 
+\section{Results}
+The experiment was tested for datasets ranging from~$1E^6$ to~$1E^8$ in
+increments of~$1E^6$ on an Intel Core2Duo running Arch Linux.  It is a
+single-user machine, allowing me greater control over the number of processes
+running at a time.  As is clearly visible in the resulting plots shown in
+Figure~\ref{fig:thePlots}, there was a large amount of variance that I did not
+account for, especially in the case of the single-threaded tests.
+%
+\begin{figure}[H]
+	\centering
+	\subfloat{\input{2threadsPlot.tex}}
+	\subfloat{\input{4threadsPlot.tex}}
+
+	\subfloat{\input{8threadsPlot.tex}}
+	\subfloat{\input{16threadsPlot.tex}}
+
+	\parbox{.8\textwidth}{
+	\caption{Plots of all histogram testing, performed on an Intel Core2Duo
+	running Arch Linux with only one user logged in. The tests were performed
+	with a custom Bash script, included in the appendix of this document for
+	transparency.}
+	\label{fig:thePlots}}
+\end{figure}
+%
+Regardless of the variations within each dataset, there is a definite benefit
+to using multiple threads to calculate histogram data.  At the worst case
+for~$1E^8$ elements, my implementation was~\SI{19}{\percent} faster with~4
+threads than the single-threaded implementation;  at its best, my
+implementation was~\SI{41}{\percent} faster (with just two threads).  This
+appears to be anomolous however, as all implementations were roughly equal in
+performance and the single-threaded implementationi oscillated with respect to
+oscillation time.
+
+\appendix
+\section{Bash Testing Script}
+	\begin{center}
+	\parbox{.6\textwidth}{
+	\lstinputlisting{../getData.sh}}
+	\end{center}
 \end{document}
 
