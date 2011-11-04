@@ -29,31 +29,6 @@ void *customer(void *num); // Prototype for customer thread
 void *barber(void *); // Prototype of barber thread
 int UD(int, int); // Random number generator
 
-typedef struct empty_seat_element {
-	pthread_mutex_t *mutex;
-	empty_seat_struct *next;
-} empty_seat;
-
-void add_seat(empty_seat *seat, empty_seat *free_seats)
-{
-	empty_seat tmp = free_seats;
-
-	while( tmp->next != NULL )
-		tmp = free_seats->next;
-
-	/* seat->mutex = new mutex */
-	seat->next = NULL;
-	free_seats->next = seat;
-}
-
-void delete_seat(empty_seat *free_seats)
-{
-	free_seats = free_seats->next;
-}
-
-
-
-
 
 /* definition of conditions */
 pthread_cond_t seats_available; /* seats in the waiting room are available */
