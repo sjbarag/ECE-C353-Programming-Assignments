@@ -60,7 +60,7 @@ Each thread received several pieces of information, each of which was represente
 \begin{description}
 	\item[threadID]{Integer identifier for the thread.  The first thread
 	spawned will receive ID~0, and subsequent threads will
-	receive~1,~2, $\ldots$ , \ttt{num\_threads - 1}.}
+	receive~1,~2, $\ldots$ , \ttt{num\_threads} - 1.}
 	\item[start]{Index within the input data at which the thread will begin to
 	process data.}
 	\item[count]{Number of elements the thread shall process.}
@@ -92,6 +92,41 @@ the process of spawning threads begins.
 \lst{147}{155}
 
 \subsection{Thread Creation}
+In preparation for the creation of a thread, a new instance of
+\ttt{THREAD\_ARGS} is allocated and filled with the appropriate values.  Of
+note in this process is line~168, which handles the case that the number of
+elements to bin is not an integer multiple of the number of threads being
+spawned.  The line simply checks if the thread currently being built is the
+last one.  If it is not, the number of elements to bin is kept at its default
+value; if it \emph{is} the last thread, the modulus of the number of threads
+and number of elements is added to the default.  I.E. the last thread will bin
+whatever didn't fit cleanly into the other threads.  This adds at most
+\ttt{num\_threads} - 1 elements to the final thread, which is negligible for all
+cases examined here.
+%
+\lst{157}{185}
+%
+Since the source and destination pointers do not vary between threads,
+performance could be increased marginally by statically defining these values,
+but they were left this way for the sake of clarity.  Once each thread is
+successfully spawned, \ttt{compute\_using\_pthreads} waits for \emph{all} of
+the worker threads to return from their operation of the \ttt{do\_histogram}
+method.  At this point, it returns to \ttt{main()}.
+
+\subsection{Processing}
+The process that each thread goes through to bin data elements is actually
+quite simple.  The thread begins by casting the arguments to a usable form, and
+then immediately bins its assigned range of input values to its buffer array,
+using the same logic as the provided reference method.
+%
+\lst{187}{206}
+%
+When a thread has binned its assigned data, it either locks the master
+histogram or waits for another thread to release it via \ttt{sem\_wait}.  A
+thread's buffered histogram is merged into the master histogram once the lock
+is obtained, and the lock is immediately released when it is no longer needed.
+Finally, each thread exits when it has successfully released~(via
+\ttt{sem\_post}) the lock on the shared histogram.
 
 \end{document}
 
