@@ -1,0 +1,97 @@
+\documentclass{article}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+
+\lstset{
+	language=C,
+	basicstyle=\footnotesize\ttfamily,
+	commentstyle=\footnotesize\ttfamily \color{black!60},
+	numbers=left,
+	numberstyle=\tiny,
+	stepnumber=1,
+	numbersep=5pt,
+	frame=lines,
+	tabsize=4,
+	breaklines=true,
+	breakatwhitespace=true,
+	showspaces=false,
+	captionpos=b
+}
+
+\pagestyle{fancy}
+\lhead{ECE-C353}
+\chead{Homework 4 Histogram Improvements}
+\rhead{Sean Barag}
+\cfoot{\thepage\ of \pageref{LastPage}}
+
+\newcommand{\lst}[2]{
+	\begin{center}
+	\parbox{.6\textwidth}{
+	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{../histogram.c}}
+	\end{center}
+}
+
+\newcommand{\ttt}[1]{\texttt{#1}}
+
+\title{ECE-C353: Systems Programming \\ Homework 4 Histogram Improvements}
+\author{Sean Barag \\ \ttt{<sjb89@drexel.edu>}}
+\date{\today}
+
+\begin{document}
+\maketitle
+\section{Design}
+My multi-threaded implementation of histogram creation was based on code that
+was previously submitted to compute the sum of~5,000,000 floats.  By splitting
+the input data into several groups, a divide-and-conquer approach can be
+applied.
+
+\subsection{Custom Type}
+My solution required the creation of a custom object type, through which I passed each thread's arguments.
+%
+\lst{21}{31}
+%
+Each thread received several pieces of information, each of which was represented by an object within the \ttt{THREAD\_ARGS} type:
+
+\begin{center}
+\parbox{.85\textwidth}{
+\begin{description}
+	\item[threadID]{Integer identifier for the thread.  The first thread
+	spawned will receive ID~0, and subsequent threads will
+	receive~1,~2, $\ldots$ , \ttt{num\_threads - 1}.}
+	\item[start]{Index within the input data at which the thread will begin to
+	process data.}
+	\item[count]{Number of elements the thread shall process.}
+	\item[src]{Pointer to an array of integers that will be the source of data
+	to be processed.}
+	\item[dst]{Pointer to an array of integers that will serve as the end
+	destination for the processed data.}
+	\item[buf]{Pointer to an array of integers that will be used to buffer the
+	thread's processed data until its completion.}
+\end{description}
+}
+\end{center}
+
+\subsection{Initialization}
+The multi-threaded implementation has an entrance point at the provided call to
+\ttt{compute\_using\_pthreads}, now at line~94.  It begins by simply
+initializing a series of variables and a semaphore for the implementation's shared histogram:
+%
+\lst{134}{145}
+%
+It then allocates \ttt{num\_threads} a two-dimensional array consisting of
+\ttt{num\_threads} single-dimensional arrays, each with
+\ttt{histogram\_size} elements.  Each one-dimensional array will act as a
+buffer for a thread's processed values, allowing each thread to make changes to
+the shared histogram only once.  This reduces contention and increases
+performance.  The elements of each buffer array are initialized to zero, and
+the process of spawning threads begins.
+%
+\lst{147}{155}
+
+\subsection{Thread Creation}
+
+\end{document}
+
