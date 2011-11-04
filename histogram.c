@@ -182,7 +182,7 @@ void compute_using_pthreads(int *input_data, int *histogram, int num_elements, i
 	/* wait for all threads to return before proceeding */
 	for(int i = 0; i < num_threads; i++)
 		pthread_join( thread[i], NULL );
-}
+} // compute_using_pthreads
 
 void *do_histogram(void *in_args)
 {
