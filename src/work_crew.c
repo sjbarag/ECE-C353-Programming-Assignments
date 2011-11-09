@@ -14,12 +14,29 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
+#include <pthread.h>
 #include "queue.h"
 
 // Function prototypes
 void search_for_string_serial(char **);
 void search_for_string_mt(char **);
+void *worker_thread( void * );
 
+#define NUM_THREADS 1
+int num_threads;
+
+/* structure for thread arguments */
+typedef struct thread_args
+{
+	int threadID;
+
+	pthread_mutex_t *mutex_queue;
+	pthread_mutex_t *mutex_count;
+	queue_t *queue;
+
+	char **argv;
+
+} THREAD_ARGS;
 
 int main(int argc, char** argv)
 {
@@ -174,102 +191,175 @@ void search_for_string_serial(char **argv)
 /* Given a search string, the function performs a multi-threaded search of the file system starting from the specified path name. */
 void search_for_string_mt(char **argv)
 {
-	/* While there is work in the queue, process it. */
-	while(queue->head != NULL)
+	pthread_mutex_t queue_mutex, count_mutex;
+	pthread_mutex_init( &queue_mutex, NULL);
+	pthread_mutex_init( &count_mutex, NULL);
+
+	THREAD_ARGS *t_args;
+
+	t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
+
+	t_args->threadID = 0;
+	t_args->mutex_queue = &queue_mutex;
+	t_args->mutex_count = &count_mutex;
+	t_args->argv = argv;
+
+	pthread_t threads[NUM_THREADS];
+	num_threads = 0;
+
+	if( pthread_create( &threads[0], NULL, worker_thread, (void *)t_args ) == 0 )
 	{
-		queue_element_t *element = remove_from_queue(queue);
-		status = lstat(element->path_name, &file_stats); // Obtain information about the file pointed to by path_name
-		if(status == -1){
-			printf("Error obtaining stats for %s \n", element->path_name);
-			free((void *)element);
-			continue;
+		pthread_mutex_lock( &queue_mutex );
+		num_threads++;
+		pthread_mutex_unlock( &queue_mutex );
+	}
+	else
+	{
+		printf("Error: could not create thread! Exiting\n");
+		exit(-1);
+	}
+
+	for( int i = 0; i < NUM_THREADS; i++ )
+		pthread_join( threads[i], NULL );
+}
+
+void *worker_thread( void *args )
+{
+	THREAD_ARGS *l_args = (THREAD_ARGS *) args;
+
+	int num_occurences = 0;
+	queue_element_t *element, *new_element;
+	struct stat file_stats;
+	int status;
+	DIR *directory = NULL;
+	struct dirent *result = NULL;
+	struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH); // Allocate memory for the directory structure
+
+	/* initialize queue if on thread zero */
+	if( l_args->threadID == 0 )
+	{
+		/* Create and initialize the queue data structure. */
+		l_args->queue = create_queue();
+		element = (queue_element_t *)malloc(sizeof(queue_element_t));
+		if(element == NULL)
+		{
+			printf("Error allocating memory. Exiting. \n");
+			exit(-1);
 		}
-		if(S_ISLNK(file_stats.st_mode)){ // Check if the file is a symbolic link; if so ignore it
-		}
-		else if(S_ISDIR(file_stats.st_mode))
-		{ // Check if file is a directory; if so descend into it and post work to the queue
-			printf("%s is a directory. \n", element->path_name);
-			directory = opendir(element->path_name);
-			if(directory == NULL)
+		strcpy(element->path_name, l_args->argv[2]);
+		element->next = NULL;
+		insert_in_queue(l_args->queue, element); // Insert the initial path name into the queue
+	}
+
+	while( 1 )
+	{
+		pthread_mutex_lock( l_args->mutex_queue );
+		/* While there is work in the queue, process it. */
+		if(l_args->queue->head != NULL)
+		{
+			queue_element_t *element = remove_from_queue(l_args->queue);
+			pthread_mutex_unlock( l_args->mutex_queue );
+			status = lstat(element->path_name, &file_stats); // Obtain information about the file pointed to by path_name
+			if(status == -1)
 			{
-				printf("Unable to open directory %s \n", element->path_name);
+				printf("Error obtaining stats for %s \n", element->path_name);
+				free((void *)element);
 				continue;
 			}
-			while(1)
-			{
-				status = readdir_r(directory, entry, &result); // Store the directory item in the entry data structure; if result == NULL, we have reached the end of the directory
-				if(status != 0)
-				{
-				  		 printf("Unable to read directory %s \n", element->path_name);
-				  		 break;
-				}
-				if(result == NULL)
-				  		 break; // End of directory
-				/* Ignore the "." and ".." entries. */
-				if(strcmp(entry->d_name, ".") == 0)
-				  		 continue;
-				if(strcmp(entry->d_name, "..") == 0)
-				  		 continue;
-
-				/* Insert this directory entry in the queue. */
-				new_element = (queue_element_t *)malloc(sizeof(queue_element_t));
-				if(new_element == NULL)
-				{
-					printf("Error allocating memory. Exiting. \n");
-					exit(-1);
-				}
-				/* Construct the full path name for the directory item stored in entry. */
-				strcpy(new_element->path_name, element->path_name);
-				strcat(new_element->path_name, "/");
-				strcat(new_element->path_name, entry->d_name);
-				insert_in_queue(queue, new_element);
+			if(S_ISLNK(file_stats.st_mode)){ // Check if the file is a symbolic link; if so ignore it
 			}
-			closedir(directory);
-		}
-		else if(S_ISREG(file_stats.st_mode))// Check if file is a regular file
-		{
-		 	printf("%s is a regular file. \n", element->path_name);
-		 	FILE *file_to_search;
-		 	char buffer[MAX_LENGTH];
-		 	char *bufptr, *searchptr;
-
-		 	/* Search the file for the search string provided as the command-line argument. */
-		 	file_to_search = fopen(element->path_name, "r");
-		 	if(file_to_search == NULL)
+			else if(S_ISDIR(file_stats.st_mode))// Check if file is a directory; if so descend into it and post work to the queue
 			{
-		 		printf("Unable to open file %s \n", element->path_name);
-		 		continue;
-		 	}
-		 	else
-			{
-		 		while(1)
+				printf("%s is a directory. \n", element->path_name);
+				directory = opendir(element->path_name);
+				if(directory == NULL)
 				{
-		 			bufptr = fgets(buffer, sizeof(buffer), file_to_search);
-		 			if(bufptr == NULL)
+					printf("Unable to open directory %s \n", element->path_name);
+					continue;
+				}
+				while(1)
+				{
+					status = readdir_r(directory, entry, &result); // Store the directory item in the entry data structure; if result == NULL, we have reached the end of the directory
+					if(status != 0)
 					{
-		 				if(feof(file_to_search)) break;
-		 				if(ferror(file_to_search))
+					  		 printf("Unable to read directory %s \n", element->path_name);
+					  		 break;
+					}
+					if(result == NULL)
+					{
+					  		 break; // End of directory
+							 /* pthread_create( */
+					}
+					/* Ignore the "." and ".." entries. */
+					if(strcmp(entry->d_name, ".") == 0)
+					  		 continue;
+					if(strcmp(entry->d_name, "..") == 0)
+					  		 continue;
+
+					/* Insert this directory entry in the queue. */
+					new_element = (queue_element_t *)malloc(sizeof(queue_element_t));
+					if(new_element == NULL)
+					{
+						printf("Error allocating memory. Exiting. \n");
+						exit(-1);
+					}
+					/* Construct the full path name for the directory item stored in entry. */
+					strcpy(new_element->path_name, element->path_name);
+					strcat(new_element->path_name, "/");
+					strcat(new_element->path_name, entry->d_name);
+					pthread_mutex_lock( l_args->mutex_queue );
+					insert_in_queue(l_args->queue, new_element);
+					pthread_mutex_unlock( l_args->mutex_queue );
+				}
+				closedir(directory);
+			}
+			else if(S_ISREG(file_stats.st_mode))// Check if file is a regular file
+			{
+			 	printf("%s is a regular file. \n", element->path_name);
+			 	FILE *file_to_search;
+			 	char buffer[MAX_LENGTH];
+			 	char *bufptr, *searchptr;
+
+			 	/* Search the file for the search string provided as the command-line argument. */
+			 	file_to_search = fopen(element->path_name, "r");
+			 	if(file_to_search == NULL)
+				{
+			 		printf("Unable to open file %s \n", element->path_name);
+			 		continue;
+			 	}
+			 	else
+				{
+			 		while(1)
+					{
+			 			bufptr = fgets(buffer, sizeof(buffer), file_to_search);
+			 			if(bufptr == NULL)
 						{
-		 					printf("Error reading file %s \n", element->path_name);
-		 					break;
-		 				}
-		 			}
-		 			searchptr = strstr(buffer, argv[1]);
-		 			if(searchptr != NULL)
-					{
-		 				printf("Found string %s within file %s. \n", argv[1], element->path_name);
-		 				num_occurences ++;
-		 				// getchar();
-		 			}
-		 		}
-		 	}
-		 	fclose(file_to_search);
-		}
+			 				if(feof(file_to_search)) break;
+			 				if(ferror(file_to_search))
+							{
+			 					printf("Error reading file %s \n", element->path_name);
+			 					break;
+			 				}
+			 			}
+			 			searchptr = strstr(buffer, l_args->argv[1]);
+			 			if(searchptr != NULL)
+						{
+			 				printf("Found string %s within file %s. \n", l_args->argv[1], element->path_name);
+			 				num_occurences ++;
+			 				// getchar();
+			 			}
+			 		}
+			 	}
+			 	fclose(file_to_search);
+			}
+			else
+			{
+				printf("%s is of type other. \n", element->path_name);
+			}
+			free((void *)element);
+		} // if
 		else
-		{
-			printf("%s is of type other. \n", element->path_name);
-		}
-		free((void *)element);
-	} // while
+			break;
+	}
 }
 
