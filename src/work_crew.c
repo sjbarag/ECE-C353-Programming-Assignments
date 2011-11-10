@@ -34,6 +34,8 @@ typedef struct thread_args
 	pthread_mutex_t *mutex_count;
 	queue_t *queue;
 
+	int *num_occurences;
+
 	char **argv;
 
 } THREAD_ARGS;
@@ -192,8 +194,10 @@ void search_for_string_serial(char **argv)
 void search_for_string_mt(char **argv)
 {
 	pthread_mutex_t queue_mutex, count_mutex;
-	pthread_mutex_init( &queue_mutex, NULL);
-	pthread_mutex_init( &count_mutex, NULL);
+	pthread_mutex_init( &queue_mutex, NULL); pthread_mutex_init( &count_mutex, NULL);
+
+	int count = 0;
+	int *p_count = &count;
 
 	THREAD_ARGS *t_args;
 
@@ -202,10 +206,14 @@ void search_for_string_mt(char **argv)
 	t_args->threadID = 0;
 	t_args->mutex_queue = &queue_mutex;
 	t_args->mutex_count = &count_mutex;
+	t_args->num_occurences = p_count;
 	t_args->argv = argv;
 
 	pthread_t threads[NUM_THREADS];
 	num_threads = 0;
+
+	struct timeval start;
+	gettimeofday(&start, NULL);
 
 	if( pthread_create( &threads[0], NULL, worker_thread, (void *)t_args ) == 0 )
 	{
@@ -219,15 +227,26 @@ void search_for_string_mt(char **argv)
 		exit(-1);
 	}
 
+	printf("===== SPAWNED FIRST THREAD =====\n");
+
 	for( int i = 0; i < NUM_THREADS; i++ )
 		pthread_join( threads[i], NULL );
+
+	printf("===== ALL THREADS RETURNED =====\n");
+
+	struct timeval stop;
+	gettimeofday(&stop, NULL);
+
+
+	printf("\n \n \n");
+	printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	printf("The string %s was found %d times within the file system. \n", argv[1], count);
 }
 
 void *worker_thread( void *args )
 {
 	THREAD_ARGS *l_args = (THREAD_ARGS *) args;
 
-	int num_occurences = 0;
 	queue_element_t *element, *new_element;
 	struct stat file_stats;
 	int status;
@@ -345,7 +364,10 @@ void *worker_thread( void *args )
 			 			if(searchptr != NULL)
 						{
 			 				printf("Found string %s within file %s. \n", l_args->argv[1], element->path_name);
-			 				num_occurences ++;
+							pthread_mutex_lock(l_args->mutex_count);
+			 				(*l_args->num_occurences)++;
+							printf("\tNew value of count: %d\n", *l_args->num_occurences);
+							pthread_mutex_unlock(l_args->mutex_count);
 			 				// getchar();
 			 			}
 			 		}
@@ -359,7 +381,21 @@ void *worker_thread( void *args )
 			free((void *)element);
 		} // if
 		else
+		{
+			/*
+			 * if( num_sleeping == (NUM_THREADS - 1) )
+			 * {
+			 *	// wake everyone up
+			 *	pthread_broadcast( &wake_up );
+			 * }
+			 * else
+			 * {
+			 * 	add to num_sleeping
+			 * 	sleep
+			 * }
+			 */
 			break;
+		}
 	}
 }
 
