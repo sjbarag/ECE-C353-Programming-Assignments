@@ -12,6 +12,9 @@ default : q1
 q1 : ${SRC_1} ${SRC_2} ${HDR} ${OUTDIR}
 	${CC} ${CFLAGS} -o ${OUTFILE} ${SRC_1} ${SRC_2}
 
+run : ${OUTFILE}
+	./${OUTFILE} double ~/school/ecec353/
+
 ${OUTDIR}:
 	mkdir out/
 
