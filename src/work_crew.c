@@ -22,7 +22,7 @@ void search_for_string_serial(char **);
 void search_for_string_mt(char **);
 void *worker_thread( void * );
 
-#define NUM_THREADS 1
+#define NUM_THREADS 8
 int num_threads;
 
 /* structure for thread arguments */
