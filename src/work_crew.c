@@ -306,9 +306,11 @@ void *worker_thread( void *args )
 			}
 			if(S_ISLNK(file_stats.st_mode)){ // Check if the file is a symbolic link; if so ignore it
 			}
-			else if(S_ISDIR(file_stats.st_mode))// Check if file is a directory; if so descend into it and post work to the queue
+			// Check if file is a directory; if so descend into it and post
+			//     work to the queue
+			else if(S_ISDIR(file_stats.st_mode))
 			{
-				//DBG printf("%s is a directory. \n", element->path_name);
+				printf("I/%d: %s is a directory. \n", l_args->threadID, element->path_name);
 				directory = opendir(element->path_name);
 				if(directory == NULL)
 				{
@@ -317,7 +319,9 @@ void *worker_thread( void *args )
 				}
 				while(1)
 				{
-					status = readdir_r(directory, entry, &result); // Store the directory item in the entry data structure; if result == NULL, we have reached the end of the directory
+					// Store the directory item in the entry data structure; if
+					//     result == NULL, we have reached the end of the directory
+					status = readdir_r(directory, entry, &result);
 					if(status != 0)
 					{
 					  	printf("Unable to read directory %s \n", element->path_name);
@@ -350,8 +354,8 @@ void *worker_thread( void *args )
 						}
 
 					  	break; // End of directory
-						/* pthread_create( */
 					}
+
 					/* Ignore the "." and ".." entries. */
 					if(strcmp(entry->d_name, ".") == 0)
 					  		 continue;
@@ -369,16 +373,21 @@ void *worker_thread( void *args )
 					strcpy(new_element->path_name, element->path_name);
 					strcat(new_element->path_name, "/");
 					strcat(new_element->path_name, entry->d_name);
+
+					/* safely add to queue */
 					pthread_mutex_lock( l_args->mutex_queue );
 					insert_in_queue(l_args->queue, new_element);
 					pthread_mutex_unlock( l_args->mutex_queue );
+
+					/* wake up others */
+					printf("D/%d: Sent wake_up\n", l_args->threadID);
 					pthread_cond_broadcast( &wake_up );
 				}
 				closedir(directory);
 			}
 			else if(S_ISREG(file_stats.st_mode))// Check if file is a regular file
 			{
-			 	//DBG printf("%s is a regular file. \n", element->path_name);
+			 	printf("I/%d: %s is a regular file. \n", l_args->threadID, element->path_name);
 			 	FILE *file_to_search;
 			 	char buffer[MAX_LENGTH];
 			 	char *bufptr, *searchptr;
@@ -407,7 +416,7 @@ void *worker_thread( void *args )
 			 			searchptr = strstr(buffer, l_args->argv[1]);
 			 			if(searchptr != NULL)
 						{
-			 				printf("Found string %s within file %s. \n", l_args->argv[1], element->path_name);
+			 				printf("I/%d: Found string %s within file %s. \n", l_args->threadID, l_args->argv[1], element->path_name);
 							pthread_mutex_lock(l_args->mutex_count);
 			 				(*l_args->num_occurences)++;
 							printf("\tNew value of count: %d\n", *l_args->num_occurences);
@@ -420,12 +429,13 @@ void *worker_thread( void *args )
 			}
 			else
 			{
-				//DBG printf("%s is of type other. \n", element->path_name);
+				printf("I/%d: %s is of type other. \n", l_args->threadID, element->path_name);
 			}
 			free((void *)element);
 		} // if
 		else
 		{
+			pthread_mutex_unlock( l_args->mutex_queue );
 			printf("Thread %d: Queue empty\n", l_args->threadID);
 
 			if( number_sleeping == (NUM_THREADS - 1) )
@@ -446,11 +456,16 @@ void *worker_thread( void *args )
 
 				/* sleep */
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
+				printf("D/%d: Waiting for wake_up signal\n", l_args->threadID);
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
 				if( all_done )
 					pthread_exit(0);
-
+				else
+				{
+					printf("D/%d: received wake_up signal\n", l_args->threadID);
+					continue;
+				}
 			}
 		}
 	}
