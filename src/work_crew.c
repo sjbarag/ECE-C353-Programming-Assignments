@@ -24,6 +24,14 @@ void *worker_thread( void * );
 
 #define NUM_THREADS 8
 int num_threads;
+int number_sleeping = 0;
+int all_done = 0;
+int spawned = 0;
+pthread_t threads[NUM_THREADS];
+
+pthread_cond_t wake_up;
+pthread_mutex_t num_sleeping;
+pthread_mutex_t *sleepers;
 
 /* structure for thread arguments */
 typedef struct thread_args
@@ -194,7 +202,15 @@ void search_for_string_serial(char **argv)
 void search_for_string_mt(char **argv)
 {
 	pthread_mutex_t queue_mutex, count_mutex;
-	pthread_mutex_init( &queue_mutex, NULL); pthread_mutex_init( &count_mutex, NULL);
+	pthread_mutex_init( &queue_mutex, NULL);
+	pthread_mutex_init( &count_mutex, NULL);
+
+	pthread_cond_init( &wake_up, NULL );
+	pthread_mutex_init( &num_sleeping, NULL );
+
+	sleepers = (pthread_mutex_t *)malloc( sizeof(pthread_mutex_t)*NUM_THREADS );
+	for( int i = 0; i < NUM_THREADS; i ++ )
+		pthread_mutex_init( &sleepers[i], NULL );
 
 	int count = 0;
 	int *p_count = &count;
@@ -209,7 +225,7 @@ void search_for_string_mt(char **argv)
 	t_args->num_occurences = p_count;
 	t_args->argv = argv;
 
-	pthread_t threads[NUM_THREADS];
+
 	num_threads = 0;
 
 	struct timeval start;
@@ -269,6 +285,9 @@ void *worker_thread( void *args )
 		element->next = NULL;
 		insert_in_queue(l_args->queue, element); // Insert the initial path name into the queue
 	}
+	else
+		printf("\tChild %d spawned.\n", l_args->threadID);
+
 
 	while( 1 )
 	{
@@ -289,7 +308,7 @@ void *worker_thread( void *args )
 			}
 			else if(S_ISDIR(file_stats.st_mode))// Check if file is a directory; if so descend into it and post work to the queue
 			{
-				printf("%s is a directory. \n", element->path_name);
+				//DBG printf("%s is a directory. \n", element->path_name);
 				directory = opendir(element->path_name);
 				if(directory == NULL)
 				{
@@ -301,13 +320,40 @@ void *worker_thread( void *args )
 					status = readdir_r(directory, entry, &result); // Store the directory item in the entry data structure; if result == NULL, we have reached the end of the directory
 					if(status != 0)
 					{
-					  		 printf("Unable to read directory %s \n", element->path_name);
-					  		 break;
+					  	printf("Unable to read directory %s \n", element->path_name);
+					  	break;
 					}
 					if(result == NULL)
 					{
-					  		 break; // End of directory
-							 /* pthread_create( */
+						if( l_args->threadID == 0 && !spawned )
+						{
+							spawned = 1;
+							printf("\t=== %d SPAWNING CHILD THREADS ===\t\n", l_args->threadID);
+							THREAD_ARGS *t_args;
+							for( int i = 1; i < NUM_THREADS; i++ )
+							{
+								t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
+								t_args->threadID = i;
+								t_args->queue = l_args->queue;
+								t_args->mutex_queue = l_args->mutex_queue;
+								t_args->mutex_count = l_args->mutex_count;
+								t_args->num_occurences = l_args->num_occurences;
+								/* NULL argv implies it's a worker thread */
+								t_args->argv = l_args->argv;
+
+								if( pthread_create( &threads[i], NULL, worker_thread, (void *)t_args ) != 0 )
+								{
+									printf("Error: could not create thread %d! Exiting\n");
+									exit(-1);
+								}
+								pthread_mutex_lock( &queue_mutex );
+								num_threads++;
+								pthread_mutex_unlock( &queue_mutex );
+							}
+						}
+
+					  	break; // End of directory
+						/* pthread_create( */
 					}
 					/* Ignore the "." and ".." entries. */
 					if(strcmp(entry->d_name, ".") == 0)
@@ -329,12 +375,13 @@ void *worker_thread( void *args )
 					pthread_mutex_lock( l_args->mutex_queue );
 					insert_in_queue(l_args->queue, new_element);
 					pthread_mutex_unlock( l_args->mutex_queue );
+					pthread_cond_broadcast( &wake_up );
 				}
 				closedir(directory);
 			}
 			else if(S_ISREG(file_stats.st_mode))// Check if file is a regular file
 			{
-			 	printf("%s is a regular file. \n", element->path_name);
+			 	//DBG printf("%s is a regular file. \n", element->path_name);
 			 	FILE *file_to_search;
 			 	char buffer[MAX_LENGTH];
 			 	char *bufptr, *searchptr;
@@ -376,25 +423,38 @@ void *worker_thread( void *args )
 			}
 			else
 			{
-				printf("%s is of type other. \n", element->path_name);
+				//DBG printf("%s is of type other. \n", element->path_name);
 			}
 			free((void *)element);
 		} // if
 		else
 		{
-			/*
-			 * if( num_sleeping == (NUM_THREADS - 1) )
-			 * {
-			 *	// wake everyone up
-			 *	pthread_broadcast( &wake_up );
-			 * }
-			 * else
-			 * {
-			 * 	add to num_sleeping
-			 * 	sleep
-			 * }
-			 */
-			break;
+			printf("Thread %d: Queue empty\n", l_args->threadID);
+
+			if( number_sleeping == (NUM_THREADS - 1) )
+			{
+				printf( "\tThread %d waking everyone\n", l_args->threadID);
+				// wake everyone up
+				all_done = 1;
+				pthread_cond_broadcast( &wake_up );
+				pthread_exit( 0 );
+			}
+			else
+			{
+				printf( "\tthread %d sleeping\n", l_args->threadID );
+				/* add to number of sleeping */
+				pthread_mutex_lock( &num_sleeping );
+				number_sleeping ++;
+				pthread_mutex_unlock( &num_sleeping );
+
+				/* sleep */
+				pthread_mutex_lock( &sleepers[l_args->threadID] );
+				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
+				pthread_mutex_unlock( &sleepers[l_args->threadID] );
+				if( all_done )
+					pthread_exit(0);
+
+			}
 		}
 	}
 }
