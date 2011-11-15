@@ -196,6 +196,8 @@ void search_for_string_serial(char **argv)
 		  printf("\n \n \n");
 		  printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 		  printf("The string %s was found %d times within the file system. \n", argv[1], num_occurences);
+
+		  printf("====================\n\n");
 }
 
 /* Given a search string, the function performs a multi-threaded search of the file system starting from the specified path name. */
