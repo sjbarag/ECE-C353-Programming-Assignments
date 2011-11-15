@@ -239,16 +239,12 @@ void search_for_string_mt(char **argv)
 	}
 	else
 	{
-		printf("Error: could not create thread! Exiting\n");
+		printf("E: could not create thread! Exiting\n");
 		exit(-1);
 	}
 
-	printf("===== SPAWNED FIRST THREAD =====\n");
-
 	for( int i = 0; i < NUM_THREADS; i++ )
 		pthread_join( threads[i], NULL );
-
-	printf("===== ALL THREADS RETURNED =====\n");
 
 	struct timeval stop;
 	gettimeofday(&stop, NULL);
@@ -278,15 +274,13 @@ void *worker_thread( void *args )
 		element = (queue_element_t *)malloc(sizeof(queue_element_t));
 		if(element == NULL)
 		{
-			printf("Error allocating memory. Exiting. \n");
+			printf("E: Error allocating memory. Exiting. \n");
 			exit(-1);
 		}
 		strcpy(element->path_name, l_args->argv[2]);
 		element->next = NULL;
 		insert_in_queue(l_args->queue, element); // Insert the initial path name into the queue
 	}
-	else
-		printf("\tChild %d spawned.\n", l_args->threadID);
 
 
 	while( 1 )
@@ -300,7 +294,7 @@ void *worker_thread( void *args )
 			status = lstat(element->path_name, &file_stats); // Obtain information about the file pointed to by path_name
 			if(status == -1)
 			{
-				printf("Error obtaining stats for %s \n", element->path_name);
+				printf("E/%d: Error obtaining stats for %s \n", l_args->threadID, element->path_name);
 				free((void *)element);
 				continue;
 			}
@@ -314,7 +308,7 @@ void *worker_thread( void *args )
 				directory = opendir(element->path_name);
 				if(directory == NULL)
 				{
-					printf("Unable to open directory %s \n", element->path_name);
+					printf("W/%d: Unable to open directory %s \n", l_args->threadID, element->path_name);
 					continue;
 				}
 				while(1)
@@ -324,7 +318,7 @@ void *worker_thread( void *args )
 					status = readdir_r(directory, entry, &result);
 					if(status != 0)
 					{
-					  	printf("Unable to read directory %s \n", element->path_name);
+					  	printf("W/%d: Unable to read directory %s \n", l_args->threadID, element->path_name);
 					  	break;
 					}
 					if(result == NULL)
@@ -332,7 +326,6 @@ void *worker_thread( void *args )
 						if( l_args->threadID == 0 && !spawned )
 						{
 							spawned = 1;
-							printf("\t=== %d SPAWNING CHILD THREADS ===\t\n", l_args->threadID);
 							THREAD_ARGS *t_args;
 							for( int i = 1; i < NUM_THREADS; i++ )
 							{
@@ -347,7 +340,7 @@ void *worker_thread( void *args )
 
 								if( pthread_create( &threads[i], NULL, worker_thread, (void *)t_args ) != 0 )
 								{
-									printf("Error: could not create thread %d! Exiting\n");
+									printf("E: could not create thread %d! Exiting\n");
 									exit(-1);
 								}
 							}
@@ -366,7 +359,7 @@ void *worker_thread( void *args )
 					new_element = (queue_element_t *)malloc(sizeof(queue_element_t));
 					if(new_element == NULL)
 					{
-						printf("Error allocating memory. Exiting. \n");
+						printf("E/%d: Error allocating memory. Exiting. \n", l_args->threadID);
 						exit(-1);
 					}
 					/* Construct the full path name for the directory item stored in entry. */
@@ -380,7 +373,6 @@ void *worker_thread( void *args )
 					pthread_mutex_unlock( l_args->mutex_queue );
 
 					/* wake up others */
-					printf("D/%d: Sent wake_up\n", l_args->threadID);
 					pthread_cond_broadcast( &wake_up );
 				}
 				closedir(directory);
@@ -396,7 +388,7 @@ void *worker_thread( void *args )
 			 	file_to_search = fopen(element->path_name, "r");
 			 	if(file_to_search == NULL)
 				{
-			 		printf("Unable to open file %s \n", element->path_name);
+			 		printf("I/%d: Unable to open file %s \n", l_args->threadID, element->path_name);
 			 		continue;
 			 	}
 			 	else
@@ -409,7 +401,7 @@ void *worker_thread( void *args )
 			 				if(feof(file_to_search)) break;
 			 				if(ferror(file_to_search))
 							{
-			 					printf("Error reading file %s \n", element->path_name);
+			 					printf("E/%d: Error reading file %s \n", l_args->threadID, element->path_name);
 			 					break;
 			 				}
 			 			}
@@ -419,7 +411,6 @@ void *worker_thread( void *args )
 			 				printf("I/%d: Found string %s within file %s. \n", l_args->threadID, l_args->argv[1], element->path_name);
 							pthread_mutex_lock(l_args->mutex_count);
 			 				(*l_args->num_occurences)++;
-							printf("\tNew value of count: %d\n", *l_args->num_occurences);
 							pthread_mutex_unlock(l_args->mutex_count);
 			 				// getchar();
 			 			}
@@ -436,22 +427,18 @@ void *worker_thread( void *args )
 		else
 		{
 			pthread_mutex_unlock( l_args->mutex_queue );
-			printf("Thread %d: Queue empty\n", l_args->threadID);
 			if( all_done == 1 )
 				pthread_exit(0);
 			else if( number_sleeping == (NUM_THREADS - 1) )
 			{
-				printf( "\tThread %d waking everyone\n", l_args->threadID);
 				// wake everyone up
 				all_done = 1;
 				for( int i = 0; i < NUM_THREADS; i++ )
 					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
-				printf("D/%d: wake_up broadcast sent!\n", l_args->threadID);
 				pthread_exit( 0 );
 			}
 			else
 			{
-				printf( "\tthread %d sleeping\n", l_args->threadID );
 				/* add to number of sleeping */
 				pthread_mutex_lock( &num_sleeping );
 				number_sleeping ++;
@@ -459,18 +446,14 @@ void *worker_thread( void *args )
 
 				/* sleep */
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
-				printf("D/%d: Waiting for wake_up signal\n", l_args->threadID);
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
-				printf("D/%d: received wake_up signal\n", l_args->threadID);
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
 				if( all_done == 1 )
 				{
-					printf("D/%d: Got all_done;  exiting\n", l_args->threadID);
 					pthread_exit(0);
 				}
 				else
 				{
-					printf("D/%d: woken, but not all_done\n", l_args->threadID);
 					continue;
 				}
 			}
