@@ -444,7 +444,8 @@ void *worker_thread( void *args )
 				printf( "\tThread %d waking everyone\n", l_args->threadID);
 				// wake everyone up
 				all_done = 1;
-				pthread_cond_broadcast( &wake_up );
+				for( int i = 0; i < NUM_THREADS; i++ )
+					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
 				printf("D/%d: wake_up broadcast sent!\n", l_args->threadID);
 				pthread_exit( 0 );
 			}
@@ -469,7 +470,7 @@ void *worker_thread( void *args )
 				}
 				else
 				{
-					printf("D/%d: received wake_up signal\n", l_args->threadID);
+					printf("D/%d: woken, but not all_done\n", l_args->threadID);
 					continue;
 				}
 			}
