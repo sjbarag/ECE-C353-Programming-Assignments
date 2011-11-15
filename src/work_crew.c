@@ -437,13 +437,15 @@ void *worker_thread( void *args )
 		{
 			pthread_mutex_unlock( l_args->mutex_queue );
 			printf("Thread %d: Queue empty\n", l_args->threadID);
-
-			if( number_sleeping == (NUM_THREADS - 1) )
+			if( all_done == 1 )
+				pthread_exit(0);
+			else if( number_sleeping == (NUM_THREADS - 1) )
 			{
 				printf( "\tThread %d waking everyone\n", l_args->threadID);
 				// wake everyone up
 				all_done = 1;
 				pthread_cond_broadcast( &wake_up );
+				printf("D/%d: wake_up broadcast sent!\n", l_args->threadID);
 				pthread_exit( 0 );
 			}
 			else
@@ -458,9 +460,13 @@ void *worker_thread( void *args )
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
 				printf("D/%d: Waiting for wake_up signal\n", l_args->threadID);
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
+				printf("D/%d: received wake_up signal\n", l_args->threadID);
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
-				if( all_done )
+				if( all_done == 1 )
+				{
+					printf("D/%d: Got all_done;  exiting\n", l_args->threadID);
 					pthread_exit(0);
+				}
 				else
 				{
 					printf("D/%d: received wake_up signal\n", l_args->threadID);
