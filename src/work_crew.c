@@ -32,6 +32,7 @@ pthread_t threads[NUM_THREADS];
 pthread_cond_t wake_up;
 pthread_mutex_t num_sleeping;
 pthread_mutex_t *sleepers;
+pthread_mutex_t done;
 
 /* structure for thread arguments */
 typedef struct thread_args
@@ -65,7 +66,8 @@ int main(int argc, char** argv)
 	exit(0);
 }
 
-/* Given a search string, the function performs a single-threaded or serial search of the file system starting from the specified path name. */
+/* Given a search string, the function performs a single-threaded or serial
+ * search of the file system starting from the specified path name. */
 void search_for_string_serial(char **argv)
 {
 		int num_occurences = 0;
@@ -200,7 +202,8 @@ void search_for_string_serial(char **argv)
 		  printf("====================\n\n");
 }
 
-/* Given a search string, the function performs a multi-threaded search of the file system starting from the specified path name. */
+/* Given a search string, the function performs a multi-threaded search of the
+ * file system starting from the specified path name. */
 void search_for_string_mt(char **argv)
 {
 	pthread_mutex_t queue_mutex, count_mutex;
@@ -209,6 +212,8 @@ void search_for_string_mt(char **argv)
 
 	pthread_cond_init( &wake_up, NULL );
 	pthread_mutex_init( &num_sleeping, NULL );
+
+	pthread_mutex_init( &done, NULL );
 
 	sleepers = (pthread_mutex_t *)malloc( sizeof(pthread_mutex_t)*NUM_THREADS );
 	for( int i = 0; i < NUM_THREADS; i ++ )
@@ -375,7 +380,8 @@ void *worker_thread( void *args )
 					pthread_mutex_unlock( l_args->mutex_queue );
 
 					/* wake up others */
-					pthread_cond_broadcast( &wake_up );
+					for( int i = 0; i < NUM_THREADS; i++ )
+						pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
 				}
 				closedir(directory);
 			}
@@ -429,33 +435,51 @@ void *worker_thread( void *args )
 		else
 		{
 			pthread_mutex_unlock( l_args->mutex_queue );
+			pthread_mutex_lock( &num_sleeping );
+			pthread_mutex_lock( &done );
 			if( all_done == 1 )
+			{
+				pthread_mutex_unlock( &done );
+				pthread_mutex_unlock( &num_sleeping );
 				pthread_exit(0);
+			}
 			else if( number_sleeping == (NUM_THREADS - 1) )
 			{
+				pthread_mutex_unlock( &done );
+				pthread_mutex_unlock( &num_sleeping );
 				// wake everyone up
 				all_done = 1;
+				printf("D/%d: Waking everyone up.\n", l_args->threadID);
 				for( int i = 0; i < NUM_THREADS; i++ )
 					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
+				printf("D/%d: Exiting.\n", l_args->threadID);
 				pthread_exit( 0 );
 			}
 			else
 			{
+				pthread_mutex_unlock( &done );
 				/* add to number of sleeping */
-				pthread_mutex_lock( &num_sleeping );
 				number_sleeping ++;
 				pthread_mutex_unlock( &num_sleeping );
 
+
 				/* sleep */
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
+				printf("D/%d: sleeping.\n", l_args->threadID);
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
+				printf("D/%d: awake: ", l_args->threadID);
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
 				if( all_done == 1 )
 				{
+					printf("woken to exit.\n");
 					pthread_exit(0);
 				}
 				else
 				{
+					printf("woken to continue.\n");
+					pthread_mutex_lock( &num_sleeping);
+					number_sleeping --;
+					pthread_mutex_unlock( &num_sleeping );
 					continue;
 				}
 			}
