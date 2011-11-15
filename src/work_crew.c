@@ -346,9 +346,6 @@ void *worker_thread( void *args )
 									printf("Error: could not create thread %d! Exiting\n");
 									exit(-1);
 								}
-								pthread_mutex_lock( &queue_mutex );
-								num_threads++;
-								pthread_mutex_unlock( &queue_mutex );
 							}
 						}
 
