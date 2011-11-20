@@ -445,10 +445,11 @@ void *worker_thread( void *args )
 			}
 			else if( number_sleeping == (NUM_THREADS - 1) )
 			{
+				all_done = 1;
 				pthread_mutex_unlock( &done );
 				pthread_mutex_unlock( &num_sleeping );
 				// wake everyone up
-				all_done = 1;
+
 				printf("D/%d: Waking everyone up.\n", l_args->threadID);
 				for( int i = 0; i < NUM_THREADS; i++ )
 					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
@@ -466,6 +467,14 @@ void *worker_thread( void *args )
 				/* sleep */
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
 				printf("D/%d: sleeping.\n", l_args->threadID);
+				pthread_mutex_lock( &done ); // check done status just before sleeping
+				if( all_done == 1 )
+				{
+					pthread_mutex_unlock( &done );
+					pthread_mutex_unlock( &sleepers[l_args->threadID] );
+					pthread_exit(0);
+				}
+				pthread_mutex_unlock( &done );
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
 				printf("D/%d: awake: ", l_args->threadID);
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
