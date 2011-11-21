@@ -1,9 +1,10 @@
-#define NUM_THREADS 2
+int NUM_THREADS;
 int num_threads;
 int number_sleeping = 0;
 int all_done = 0;
 int spawned = 0;
-pthread_t threads[NUM_THREADS];
+pthread_t *threads;
+//pthread_t threads[NUM_THREADS];
 
 pthread_cond_t wake_up;
 pthread_mutex_t num_sleeping;

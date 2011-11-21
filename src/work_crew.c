@@ -25,9 +25,16 @@ int main(int argc, char** argv)
 {
 	if(argc < 3)
 	{
-		printf("Usage: %s <search string> <path> \n", argv[0]);
+		printf("Usage: %s <search string> <path> [num threads]\n", argv[0]);
 		exit(0);
 	}
+	if( argc == 4 )
+		NUM_THREADS = atoi(argv[3]);
+	else
+		NUM_THREADS = 8;
+
+
+	threads = (pthread_t *)malloc(sizeof(pthread_t)*NUM_THREADS);
 
 	// Perform a serial search of the file system
 	RET_TYPE *a = search_for_string_serial(argv);
@@ -36,8 +43,8 @@ int main(int argc, char** argv)
 	RET_TYPE *b = search_for_string_mt(argv);
 
 	printf("\n\n\n");
-	printf("                  \tSingle\t\tMulti\t\tMatch\n");
-	printf("Scriptable output:\t%f\t%f\t%s\n", a->time, b->time, (a->count == b->count) ? "true" : "false");
+	printf("                  Threads\tSingle\t\tMulti\t\tMatch\n");
+	printf("Scriptable output:\t%d\t%f\t%f\t%s\n", NUM_THREADS, a->time, b->time, (a->count == b->count) ? "true" : "false");
 	exit(0);
 }
 
