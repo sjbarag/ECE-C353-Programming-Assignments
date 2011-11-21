@@ -6,6 +6,6 @@ for loop in {1..10}
 do
 	for threads in 2 4 8 16
 	do
-		out/work_crew double ~/school $i | grep "$SIG_TEXT" | sed "s/$SIG_TEXT\t//" >> data.txt
+		out/work_crew double ~/school $threads | grep "$SIG_TEXT" | sed "s/$SIG_TEXT\t//" >> data.txt
 	done
 done
