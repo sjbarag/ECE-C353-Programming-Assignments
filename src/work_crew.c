@@ -17,37 +17,9 @@
 #include <pthread.h>
 #include "queue.h"
 
-// Function prototypes
-void search_for_string_serial(char **);
-void search_for_string_mt(char **);
-void *worker_thread( void * );
 
-#define NUM_THREADS 8
-int num_threads;
-int number_sleeping = 0;
-int all_done = 0;
-int spawned = 0;
-pthread_t threads[NUM_THREADS];
+#include "work_crew.h"
 
-pthread_cond_t wake_up;
-pthread_mutex_t num_sleeping;
-pthread_mutex_t *sleepers;
-pthread_mutex_t done;
-
-/* structure for thread arguments */
-typedef struct thread_args
-{
-	int threadID;
-
-	pthread_mutex_t *mutex_queue;
-	pthread_mutex_t *mutex_count;
-	queue_t *queue;
-
-	int *num_occurences;
-
-	char **argv;
-
-} THREAD_ARGS;
 
 int main(int argc, char** argv)
 {
@@ -58,17 +30,20 @@ int main(int argc, char** argv)
 	}
 
 	// Perform a serial search of the file system
-	search_for_string_serial(argv);
+	RET_TYPE *a = search_for_string_serial(argv);
 
 	// Perform a multi-threaded search of the file system
-	search_for_string_mt(argv);
+	RET_TYPE *b = search_for_string_mt(argv);
 
+	printf("\n\n\n");
+	printf("                  \tSingle\t\tMulti\t\tMatch\n");
+	printf("Scriptable output:\t%f\t%f\t%s\n", a->time, b->time, (a->count == b->count) ? "true" : "false");
 	exit(0);
 }
 
 /* Given a search string, the function performs a single-threaded or serial
  * search of the file system starting from the specified path name. */
-void search_for_string_serial(char **argv)
+RET_TYPE* search_for_string_serial(char **argv)
 {
 		int num_occurences = 0;
 		queue_element_t *element, *new_element;
@@ -192,19 +167,26 @@ void search_for_string_serial(char **argv)
 			free((void *)element);
 		} // while
 
-		  /* Stop timer here and determine the elapsed time. */
-		  struct timeval stop;
-		  gettimeofday(&stop, NULL);
-		  printf("\n \n \n");
-		  printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
-		  printf("The string %s was found %d times within the file system. \n", argv[1], num_occurences);
+		/* Stop timer here and determine the elapsed time. */
+		struct timeval stop;
+		gettimeofday(&stop, NULL);
+		printf("\n \n \n");
+		printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+		printf("The string %s was found %d times within the file system. \n", argv[1], num_occurences);
 
-		  printf("====================\n\n");
+		printf("====================\n\n");
+
+
+		RET_TYPE *out = (RET_TYPE *)malloc(sizeof(RET_TYPE));
+		out->time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+		out->count = num_occurences;
+
+		return out;
 }
 
 /* Given a search string, the function performs a multi-threaded search of the
  * file system starting from the specified path name. */
-void search_for_string_mt(char **argv)
+RET_TYPE* search_for_string_mt(char **argv)
 {
 	pthread_mutex_t queue_mutex, count_mutex;
 	pthread_mutex_init( &queue_mutex, NULL);
@@ -260,6 +242,13 @@ void search_for_string_mt(char **argv)
 	printf("\n \n \n");
 	printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 	printf("The string %s was found %d times within the file system. \n", argv[1], count);
+	printf("====================\n\n");
+
+	RET_TYPE *out = (RET_TYPE *)malloc(sizeof(RET_TYPE));
+	out->time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+	out->count = count;
+
+	return out;
 }
 
 void *worker_thread( void *args )
