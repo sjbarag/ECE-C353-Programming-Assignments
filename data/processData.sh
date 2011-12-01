@@ -2,13 +2,14 @@
 #
 # Re-orders data so that it can be easily plotted by gnuplot
 # Author: Sean Barag <sjb89@drexel.edu>
+IN="data_10.txt"
 OUT="data_processed.txt"
 OUT2="data_calculated.txt"
 
 # split data into separate files
 for i in 2 4 8 16
 do
-	cat data.txt | grep "^$i" | awk '{print $3}' > /tmp/pData$i.txt
+	cat $IN | grep "^$i" | awk '{print $3}' > /tmp/pData$i.txt
 done
 
 # paste files together
