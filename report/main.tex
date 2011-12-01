@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{gnuplot-lua-tikz}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{siunitx}
+
+\lstset{
+	language=C,
+	basicstyle=\footnotesize\ttfamily,
+	commentstyle=\footnotesize\ttfamily \color{black!60},
+	numbers=left,
+	numberstyle=\tiny,
+	stepnumber=1,
+	numbersep=5pt,
+	frame=lines,
+	tabsize=4,
+	breaklines=true,
+	breakatwhitespace=true,
+	showspaces=false,
+	captionpos=b
+}
+
+\pagestyle{fancy}
+\lhead{ECE-C353}
+\chead{Final Project}
+\rhead{Sean Barag}
+\cfoot{\thepage\ of \pageref{LastPage}}
+
+\newcommand{\lst}[2]{
+	\begin{center}
+	\parbox{.6\textwidth}{
+	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{../histogram.c}}
+	\end{center}
+}
+
+\newcommand{\ttt}[1]{\texttt{#1}}
+
+\title{ECE-C353: Systems Programming \\ Final Project}
+\author{Sean Barag \\ \ttt{<sjb89@drexel.edu>}}
+\date{\today}
+
+\begin{document}
+\maketitle
+\section{Design}
+
+\subsection{Custom Type}
+\subsection{Initialization}
+\subsection{Thread Creation}
+\subsection{Processing}
+\section{Results}
+\input{img/plot/multiThreadPlot.tex}
+\appendix
+\section{Bash Testing Script}
+%	\begin{center}
+%	\parbox{.6\textwidth}{
+%	\lstinputlisting{../getData.sh}}
+%	\end{center}
+\end{document}
+
