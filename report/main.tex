@@ -75,14 +75,62 @@ These objects were declared globally, with the following intended meanings:
 	\item[number\_sleeping]{Number of spawned threads that are currently sleeping.}
 	\item[all\_done]{Boolean-like variable indicating if the entire origin directory has been searched.}
 	\item[spawned]{Boolean-like variable indicating if other threads have been spawned yet.}
-	\item[threads]{Array of type \ttt{pthread}, containing one element for each thread that is spawned.}
+	\item[threads]{Pointer to array of type \ttt{pthread}, containing one element for each thread spawned.}
 	\item[wake\_up]{Signal to wake threads up from sleeping.}
 	\item[num\_sleeping]{Mutex protecting \ttt{number\_sleeping}.}
-	\item[sleepers]{Array of mutexes protecting \ttt{number\_sleeping}.}
+	\item[sleepers]{Pointer to array of mutexes protecting \ttt{number\_sleeping}.}
 	\item[done]{Mutex protecting \ttt{all\_done}.}
 \end{description}
 }
 \end{center}
+
+In order to provide each thread with the appropriate information, a custom
+datatype was created as shown below.
+%
+\hlst{13}{26}
+%
+Similar to previous assignments, the following pieces of information were
+passed to each thread:
+%
+\begin{center}
+\parbox{.85\textwidth}{
+\begin{description}
+	\item[threadID]{Integer identifier for the thread.  The first thread
+	spawned will receive ID~0, and subsequent threads will receive~1,~2,
+	$\ldots$ , \ttt{NUM\_THREADS} - 1.}
+	\item[queue]{Pointer to the queue of files and directories to search.}
+	\item[mutex\_queue]{Pointer to the mutex protecting the work queue.}
+	\item[num\_occurences]{Pointer to the integer representing the number of occurrences of the target string.}
+	\item[mutex\_count]{Pointer to the mutex protecting~\ttt{num\_occurences}.}
+\end{description}
+}
+\end{center}
+%
+Additionally, a custom datatype was created to ease the process of generating
+scriptable output.
+%
+\hlst{28}{35}
+%
+While these instance variables are fairly self-explanatory, they were created
+with the following intended meanings:
+%
+\begin{center}
+\parbox{.85\textwidth}{
+\begin{description}
+	\item[count]{The number of occurrences of the target string found by the returning function.}
+	\item[time]{Amount of time required to execute the returning function.}
+\end{description}
+}
+\end{center}
+
+Finally, the non-main functions were declared:
+%
+\hlst{38}{40}
+%
+in which~\ttt{search\_for\_string\_serial} is the single-threaded
+implementation,~\ttt{search\_for\_string\_mt} is the multi-threaded
+implementation, and~\ttt{worker\_thread} is the function executed by each
+thread.
 
 
 \subsection{Initialization}
