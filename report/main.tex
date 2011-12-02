@@ -8,6 +8,7 @@
 \usepackage{subfig}
 \usepackage{float}
 \usepackage{siunitx}
+\usepackage{color}
 \usepackage{todonotes}
 
 \lstset{
@@ -54,6 +55,8 @@
 
 \begin{document}
 \maketitle
+\tableofcontents
+\newpage
 \section{Design}
 The design for this multi-threaded recursive text search was based mostly on
 provided code, but included heavy modification to prevent deadlocks.
@@ -132,17 +135,94 @@ implementation,~\ttt{search\_for\_string\_mt} is the multi-threaded
 implementation, and~\ttt{worker\_thread} is the function executed by each
 thread.
 
+\subsection{Main File}
+\subsubsection{Main}
+The main entry point for the search test is, as is expected, the~\ttt{main}
+function, shown below.
+%
+\clst{24}{46}
+%
+The function first checks the command line arguments to ensure that it has
+sufficient information to run~--- a string and a target directory.  If this
+information is not provided, the usage syntax is printed to the screen and the
+application exists.  Additionally, if the number of threads is not provided, it
+defaults to eight.  Once this initial validation is complete, the single- and
+multi-threaded implementations are executed, and a script-safe output in the
+format of the following example:
+%
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccccc}
+		                    & Threads & Single & Multi & Match \\
+		Scriptable output:  & 8   & 3.292550   & 3.163284 & true \\
+	\end{tabular}
+\end{table}
+%
+This provides the number of threads, execution time for both the single- and
+multi-threaded implementations, and whether or not the number of occurrences
+for the two implementations matches in an easily-parsable format.  While this
+was not a requirement for the assignment, it made the process of acquiring and
+analyzing the resulting data much easier.
 
-\subsection{Initialization}
-\subsection{Thread Creation}
-\subsection{Processing}
+\subsubsection{Single-Threaded}
+There were no appreciable changes made to the single-threaded implementation.
+While the return type was changed to~\ttt{RET\_TYPE} and there were slight
+modifications to the post-search code, the searching portions of the function
+remained unmodified from the provided version.
+
+\subsubsection{Multi-Threaded}
+The multi-threaded approach to string search begins by allocating space for the
+threads array and declaring and initializing the relevant mutexes.
+%
+\clst{194}{227}
+%
+Next, an array of mutexes for sleeping threads is created, as well as a series
+of counters.  Finally, an instance of~\ttt{THREAD\_ARGS} is created and filled
+with the appropriate values.
+
+At this point in the execution, a timer is created and started, and an initial
+thread is spawned.
+%
+\clst{229}{244}
+%
+After spawning the first thread, the multi-threaded control function simply
+waits for all threads to return, at which point it stops the timer, calculates
+the execution time, and prints its final search results and execution time.
+%
+\clst{245}{267}
+
+\subsubsection{Worker Thread}
+
+%This initial thread traverses the entire top level of the target directory
+%without descending into any subdirectories, adding to the work queue all files
+%and directories it reaches.  The reasoning for not spawning all of the threads
+%initially is explained later in the code.
 \section{Results}
-\input{img/plot/multiThreadPlot.tex}
+\begin{figure}[H]
+\centering
+	\input{img/plot/multiThreadPlot.tex}
+\end{figure}
 \appendix
-\section{Bash Testing Script}
-%	\begin{center}
-%	\parbox{.6\textwidth}{
-%	\lstinputlisting{../getData.sh}}
-%	\end{center}
+
+\section{Scripts}
+\subsection{Data Acquisition}
+\lstset{ language=bash }
+\begin{center}
+	\parbox{.85\textwidth}{
+	\lstinputlisting{../data/getData.sh}}
+\end{center}
+
+\subsection{Data Processing}
+\begin{center}
+	\parbox{.85\textwidth}{
+	\lstinputlisting{../data/processData.sh}}
+\end{center}
+
+\subsection{Data Calculation}
+\lstset{ language=python }
+\begin{center}
+	\parbox{.85\textwidth}{
+	\lstinputlisting{../data/calcData.py}}
+\end{center}
 \end{document}
 
