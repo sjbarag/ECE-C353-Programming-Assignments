@@ -7,8 +7,8 @@ SRC_2   = src/queue_utils.c
 HDR_1   = src/work_crew.h
 HDR_2   = src/queue.h
 OUTFILE = out/work_crew
-DIR     = /home/DREXEL/nk78
-STRING  = kandasamy
+DIR     = /home/sean/school
+STRING  = double
 
 default : q1
 
