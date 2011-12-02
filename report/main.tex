@@ -70,7 +70,7 @@ These objects were declared globally, with the following intended meanings:
 \begin{center}
 \parbox{.85\textwidth}{
 \begin{description}
-	\item[NUM\_THREADS]{Maximum number of threads to possibly create.}
+	\item[MAX\_THREADS]{Maximum number of threads to possibly create.}
 	\item[num\_threads]{Number of threads that have been spawned at any time.}
 	\item[number\_sleeping]{Number of spawned threads that are currently sleeping.}
 	\item[all\_done]{Boolean-like variable indicating if the entire origin directory has been searched.}
@@ -100,8 +100,8 @@ passed to each thread:
 	$\ldots$ , \ttt{NUM\_THREADS} - 1.}
 	\item[queue]{Pointer to the queue of files and directories to search.}
 	\item[mutex\_queue]{Pointer to the mutex protecting the work queue.}
-	\item[num\_occurences]{Pointer to the integer representing the number of occurrences of the target string.}
-	\item[mutex\_count]{Pointer to the mutex protecting~\ttt{num\_occurences}.}
+	\item[num\_occurrences]{Pointer to the integer representing the number of occurrences of the target string.}
+	\item[mutex\_count]{Pointer to the mutex protecting~\ttt{num\_occurrences}.}
 \end{description}
 }
 \end{center}
