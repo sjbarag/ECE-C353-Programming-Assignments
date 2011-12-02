@@ -73,9 +73,13 @@ These objects were declared globally, with the following intended meanings:
 	\item[NUM\_THREADS]{Maximum number of threads to possibly create.}
 	\item[num\_threads]{Number of threads that have been spawned at any time.}
 	\item[number\_sleeping]{Number of spawned threads that are currently sleeping.}
-	\item[all\_done]{Boolean-like variable indicating whether or not the entire directory tree has been traversed.}
-	\item[spawned]{Boolean-like variable indicating whether or not other threads have been spawned yet.}
+	\item[all\_done]{Boolean-like variable indicating if the entire origin directory has been searched.}
+	\item[spawned]{Boolean-like variable indicating if other threads have been spawned yet.}
 	\item[threads]{Array of type \ttt{pthread}, containing one element for each thread that is spawned.}
+	\item[wake\_up]{Signal to wake threads up from sleeping.}
+	\item[num\_sleeping]{Mutex protecting \ttt{number\_sleeping}.}
+	\item[sleepers]{Array of mutexes protecting \ttt{number\_sleeping}.}
+	\item[done]{Mutex protecting \ttt{all\_done}.}
 \end{description}
 }
 \end{center}
