@@ -4,7 +4,6 @@ int number_sleeping = 0;
 int all_done = 0;
 int spawned = 0;
 pthread_t *threads;
-//pthread_t threads[NUM_THREADS];
 
 pthread_cond_t wake_up;
 pthread_mutex_t num_sleeping;
@@ -26,13 +25,16 @@ typedef struct thread_args
 
 } THREAD_ARGS;
 
+/* structure for return values
+ *
+ * these make scripting the output easier */
 typedef struct return_type
 {
 	int count;
 	float time;
 } RET_TYPE;
 
-// Function prototypes
+/* Function prototypes */
 RET_TYPE* search_for_string_serial(char **);
 RET_TYPE* search_for_string_mt(char **);
 void *worker_thread( void * );
