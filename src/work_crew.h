@@ -15,11 +15,11 @@ typedef struct thread_args
 {
 	int threadID;
 
-	pthread_mutex_t *mutex_queue;
-	pthread_mutex_t *mutex_count;
 	queue_t *queue;
+	pthread_mutex_t *mutex_queue;
 
 	int *num_occurences;
+	pthread_mutex_t *mutex_count;
 
 	char **argv;
 
