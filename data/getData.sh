@@ -14,7 +14,5 @@ do
 	do
 		out/work_crew $STRING $DIR $threads | grep "$SIG_TEXT" | sed "s/$SIG_TEXT\t//" >> $OUT
 	done
-	# convenient line break
-	echo >> $OUT
 done
 echo "All done!"
