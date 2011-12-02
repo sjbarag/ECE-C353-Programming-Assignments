@@ -18,5 +18,5 @@ set xlabel 'Number of Threads'
 set ylabel 'Time (s)'
 unset key
 
-set output "report/img/plot/multiThreadPlot.tex"
+set output "../report/img/plot/multiThreadPlot.tex"
 plot 'data_calculated.txt' using 1:2:3:4 with yerrorbars
