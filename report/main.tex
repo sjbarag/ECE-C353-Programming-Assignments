@@ -8,6 +8,7 @@
 \usepackage{subfig}
 \usepackage{float}
 \usepackage{siunitx}
+\usepackage{todonotes}
 
 \lstset{
 	language=C,
@@ -31,10 +32,17 @@
 \rhead{Sean Barag}
 \cfoot{\thepage\ of \pageref{LastPage}}
 
-\newcommand{\lst}[2]{
+\newcommand{\clst}[2]{
 	\begin{center}
 	\parbox{.6\textwidth}{
-	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{../work_crew.c}}
+	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{../src/work_crew.c}}
+	\end{center}
+}
+
+\newcommand{\hlst}[2]{
+	\begin{center}
+	\parbox{.6\textwidth}{
+	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{../src/work_crew.h}}
 	\end{center}
 }
 
@@ -47,8 +55,32 @@
 \begin{document}
 \maketitle
 \section{Design}
+The design for this multi-threaded recursive text search was based mostly on
+provided code, but included heavy modification to prevent deadlocks.
 
-\subsection{Custom Type}
+\subsection{Header File}
+All global instance, function, and type definitions were placed in the header
+file~\ttt{work\_crew.h}, to improve the readability of the main source
+file~\ttt{work\_crew.c}.
+%
+\hlst{1}{11}
+%
+These objects were declared globally, with the following intended meanings:
+%
+\begin{center}
+\parbox{.85\textwidth}{
+\begin{description}
+	\item[NUM\_THREADS]{Maximum number of threads to possibly create.}
+	\item[num\_threads]{Number of threads that have been spawned at any time.}
+	\item[number\_sleeping]{Number of spawned threads that are currently sleeping.}
+	\item[all\_done]{Boolean-like variable indicating whether or not the entire directory tree has been traversed.}
+	\item[spawned]{Boolean-like variable indicating whether or not other threads have been spawned yet.}
+	\item[threads]{Array of type \ttt{pthread}, containing one element for each thread that is spawned.}
+\end{description}
+}
+\end{center}
+
+
 \subsection{Initialization}
 \subsection{Thread Creation}
 \subsection{Processing}
