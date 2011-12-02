@@ -2,7 +2,7 @@
 #
 # Re-orders data so that it can be easily plotted by gnuplot
 # Author: Sean Barag <sjb89@drexel.edu>
-IN="data_10.txt"
+IN="data_100.txt"
 OUT="data_processed.txt"
 OUT2="data_calculated.txt"
 
