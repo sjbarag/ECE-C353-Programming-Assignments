@@ -1,4 +1,4 @@
-int NUM_THREADS;
+int MAX_THREADS;
 int num_threads;
 int number_sleeping = 0;
 int all_done = 0;
@@ -18,7 +18,7 @@ typedef struct thread_args
 	queue_t *queue;
 	pthread_mutex_t *mutex_queue;
 
-	int *num_occurences;
+	int *num_occurrences;
 	pthread_mutex_t *mutex_count;
 
 	char **argv;

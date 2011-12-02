@@ -29,12 +29,12 @@ int main(int argc, char** argv)
 		exit(0);
 	}
 	if( argc == 4 )
-		NUM_THREADS = atoi(argv[3]);
+		MAX_THREADS = atoi(argv[3]);
 	else
-		NUM_THREADS = 8;
+		MAX_THREADS = 8;
 
 
-	threads = (pthread_t *)malloc(sizeof(pthread_t)*NUM_THREADS);
+	threads = (pthread_t *)malloc(sizeof(pthread_t)*MAX_THREADS);
 
 	// Perform a serial search of the file system
 	RET_TYPE *a = search_for_string_serial(argv);
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
 	printf("\n\n\n");
 	printf("                  Threads\tSingle\t\tMulti\t\tMatch\n");
-	printf("Scriptable output:\t%d\t%f\t%f\t%s\n", NUM_THREADS, a->time, b->time, (a->count == b->count) ? "true" : "false");
+	printf("Scriptable output:\t%d\t%f\t%f\t%s\n", MAX_THREADS, a->time, b->time, (a->count == b->count) ? "true" : "false");
 	exit(0);
 }
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
  * search of the file system starting from the specified path name. */
 RET_TYPE* search_for_string_serial(char **argv)
 {
-		int num_occurences = 0;
+		int num_occurrences = 0;
 		queue_element_t *element, *new_element;
 		struct stat file_stats;
 		int status;
@@ -160,7 +160,7 @@ RET_TYPE* search_for_string_serial(char **argv)
 			 			if(searchptr != NULL)
 						{
 			 				printf("Found string %s within file %s. \n", argv[1], element->path_name);
-			 				num_occurences ++;
+			 				num_occurrences ++;
 			 				// getchar();
 			 			}
 			 		}
@@ -179,14 +179,14 @@ RET_TYPE* search_for_string_serial(char **argv)
 		gettimeofday(&stop, NULL);
 		printf("\n \n \n");
 		printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
-		printf("The string %s was found %d times within the file system. \n", argv[1], num_occurences);
+		printf("The string %s was found %d times within the file system. \n", argv[1], num_occurrences);
 
 		printf("====================\n\n");
 
 
 		RET_TYPE *out = (RET_TYPE *)malloc(sizeof(RET_TYPE));
 		out->time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
-		out->count = num_occurences;
+		out->count = num_occurrences;
 
 		return out;
 }
@@ -204,8 +204,8 @@ RET_TYPE* search_for_string_mt(char **argv)
 
 	pthread_mutex_init( &done, NULL );
 
-	sleepers = (pthread_mutex_t *)malloc( sizeof(pthread_mutex_t)*NUM_THREADS );
-	for( int i = 0; i < NUM_THREADS; i ++ )
+	sleepers = (pthread_mutex_t *)malloc( sizeof(pthread_mutex_t)*MAX_THREADS );
+	for( int i = 0; i < MAX_THREADS; i ++ )
 		pthread_mutex_init( &sleepers[i], NULL );
 
 	int count = 0;
@@ -218,7 +218,7 @@ RET_TYPE* search_for_string_mt(char **argv)
 	t_args->threadID = 0;
 	t_args->mutex_queue = &queue_mutex;
 	t_args->mutex_count = &count_mutex;
-	t_args->num_occurences = p_count;
+	t_args->num_occurrences = p_count;
 	t_args->argv = argv;
 
 
@@ -239,7 +239,7 @@ RET_TYPE* search_for_string_mt(char **argv)
 		exit(-1);
 	}
 
-	for( int i = 0; i < NUM_THREADS; i++ )
+	for( int i = 0; i < MAX_THREADS; i++ )
 		pthread_join( threads[i], NULL );
 
 	struct timeval stop;
@@ -330,14 +330,14 @@ void *worker_thread( void *args )
 						{
 							spawned = 1;
 							THREAD_ARGS *t_args;
-							for( int i = 1; i < NUM_THREADS; i++ )
+							for( int i = 1; i < MAX_THREADS; i++ )
 							{
 								t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
 								t_args->threadID = i;
 								t_args->queue = l_args->queue;
 								t_args->mutex_queue = l_args->mutex_queue;
 								t_args->mutex_count = l_args->mutex_count;
-								t_args->num_occurences = l_args->num_occurences;
+								t_args->num_occurrences = l_args->num_occurrences;
 								/* NULL argv implies it's a worker thread */
 								t_args->argv = l_args->argv;
 
@@ -376,7 +376,7 @@ void *worker_thread( void *args )
 					pthread_mutex_unlock( l_args->mutex_queue );
 
 					/* wake up others */
-					for( int i = 0; i < NUM_THREADS; i++ )
+					for( int i = 0; i < MAX_THREADS; i++ )
 						pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
 				}
 				closedir(directory);
@@ -414,7 +414,7 @@ void *worker_thread( void *args )
 						{
 			 				printf("I/%d: Found string %s within file %s. \n", l_args->threadID, l_args->argv[1], element->path_name);
 							pthread_mutex_lock(l_args->mutex_count);
-			 				(*l_args->num_occurences)++;
+			 				(*l_args->num_occurrences)++;
 							pthread_mutex_unlock(l_args->mutex_count);
 			 				// getchar();
 			 			}
@@ -439,7 +439,7 @@ void *worker_thread( void *args )
 				pthread_mutex_unlock( &num_sleeping );
 				pthread_exit(0);
 			}
-			else if( number_sleeping == (NUM_THREADS - 1) )
+			else if( number_sleeping == (MAX_THREADS - 1) )
 			{
 				all_done = 1;
 				pthread_mutex_unlock( &done );
@@ -447,7 +447,7 @@ void *worker_thread( void *args )
 				// wake everyone up
 
 				printf("D/%d: Waking everyone up.\n", l_args->threadID);
-				for( int i = 0; i < NUM_THREADS; i++ )
+				for( int i = 0; i < MAX_THREADS; i++ )
 					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
 				printf("D/%d: Exiting.\n", l_args->threadID);
 				pthread_exit( 0 );
