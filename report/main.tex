@@ -8,8 +8,6 @@
 \usepackage{subfig}
 \usepackage{float}
 \usepackage{siunitx}
-\usepackage{color}
-\usepackage{todonotes}
 
 \lstset{
 	language=C,
@@ -19,7 +17,7 @@
 	numberstyle=\tiny,
 	stepnumber=1,
 	numbersep=5pt,
-	frame=lines,
+	frame=leftline,
 	tabsize=4,
 	breaklines=true,
 	breakatwhitespace=true,
@@ -47,6 +45,11 @@
 	\end{center}
 }
 
+% I NEED SUBSUBSUBSECTIONS (``paragraphs''), DAMMIT
+\setcounter{secnumdepth}{5}
+% Force TOC to descend 5 levels
+\setcounter{tocdepth}{5}
+
 \newcommand{\ttt}[1]{\texttt{#1}}
 
 \title{ECE-C353: Systems Programming \\ Final Project}
@@ -66,7 +69,7 @@ All global instance, function, and type definitions were placed in the header
 file~\ttt{work\_crew.h}, to improve the readability of the main source
 file~\ttt{work\_crew.c}.
 %
-\hlst{1}{11}
+\hlst{1}{10}
 %
 These objects were declared globally, with the following intended meanings:
 %
@@ -90,7 +93,7 @@ These objects were declared globally, with the following intended meanings:
 In order to provide each thread with the appropriate information, a custom
 datatype was created as shown below.
 %
-\hlst{13}{26}
+\hlst{12}{25}
 %
 Similar to previous assignments, the following pieces of information were
 passed to each thread:
@@ -112,7 +115,7 @@ passed to each thread:
 Additionally, a custom datatype was created to ease the process of generating
 scriptable output.
 %
-\hlst{28}{35}
+\hlst{27}{34}
 %
 While these instance variables are fairly self-explanatory, they were created
 with the following intended meanings:
@@ -128,7 +131,7 @@ with the following intended meanings:
 
 Finally, the non-main functions were declared:
 %
-\hlst{38}{40}
+\hlst{36}{39}
 %
 in which~\ttt{search\_for\_string\_serial} is the single-threaded
 implementation,~\ttt{search\_for\_string\_mt} is the multi-threaded
@@ -174,7 +177,7 @@ remained unmodified from the provided version.
 The multi-threaded approach to string search begins by allocating space for the
 threads array and declaring and initializing the relevant mutexes.
 %
-\clst{194}{227}
+\clst{194}{226}
 %
 Next, an array of mutexes for sleeping threads is created, as well as a series
 of counters.  Finally, an instance of~\ttt{THREAD\_ARGS} is created and filled
@@ -183,20 +186,103 @@ with the appropriate values.
 At this point in the execution, a timer is created and started, and an initial
 thread is spawned.
 %
-\clst{229}{244}
+\clst{228}{237}
 %
 After spawning the first thread, the multi-threaded control function simply
 waits for all threads to return, at which point it stops the timer, calculates
 the execution time, and prints its final search results and execution time.
 %
-\clst{245}{267}
+\clst{239}{259}
 
 \subsubsection{Worker Thread}
+\paragraph{Setup}
+Each thread begins simply by casting the arguments of~\ttt{worker\_thread} from
+void~(as required by the pthread libraries) back to type~\ttt{THREAD\_ARGS}.
+%
+\clst{263}{271}
+%
+As in the single-threaded case, two queue elements are first declared as well
+as the relevant objects for any directory information that will be encountered.
 
-%This initial thread traverses the entire top level of the target directory
-%without descending into any subdirectories, adding to the work queue all files
-%and directories it reaches.  The reasoning for not spawning all of the threads
-%initially is explained later in the code.
+If the calling thread is the first one spawned~(i.e. with a \ttt{threadID} of
+zero), the shared work queue is allocated and initialized.
+%
+\clst{274}{288}
+%
+While this could have also been performed before any threads were spawned, it
+was included here in the interest of clarity.  Testing for the thread's ID
+happens once per thread and requires only~$O(1)$ time, so this causes no
+significant slowdown.
+
+\paragraph{The Loop}
+While the implementation of the searching algorithm required modifications in
+order to prevent deadlocking and data corruption, its overall flow nd operation
+remained largely unchanged.  For this reason, only the changes will be
+discussed here.
+
+Each thread begins by removing the first item of the queue.  Because all threads access
+and modify the same queue, the mutex referenced by~\ttt{mutex\_queue} must be
+locked prior to access and unlocked after in order to prevent conflicts.
+%
+\clst{291}{298}
+%
+While the single-threaded implementation tested the state of the queue in
+the~\ttt{while} loop's condition, the test was moved to the first operation
+inside the loop so that the queue could be properly protected by its mutexes.
+
+The next change occurs when the end of a directory is reached, in which the
+initial thread spawns its siblings.
+%
+\clst{329}{355}
+%
+Each thread tests its ID and whether or not the extra threads have been
+spawned.  If it is thread zero and the sibling threads haven't been created~(as
+indicated by the value of the~\ttt{spawned} variable), then an instance
+of~\ttt{THREAD\_ARGS} is created and filled prior to each thread's creation.
+
+For each new element reached by a thread, the queue must be locked and
+subsequently unlocked in order to contribute to the work queue.
+%
+\clst{370}{383}
+%
+Once the newly constructed queue element has been added and the queue unlocked,
+all remaining threads are woken up with an iterated call
+to~\ttt{pthread\_cond\_signal}.  While~\ttt{pthread\_cond\_broadcast} should be
+used to wake multiple threads that are waiting on one signal, it does not work
+in this case~--- this is most likely caused by the fact that each thread locks
+a different mutex prior to calling~\ttt{pthread\_cond\_wait}.
+
+In the event that the queue is empty, a thread simply unlocks the queue's mutex
+and locks the mutexes protecting the number of sleeping threads and the
+completion status.
+%
+\clst{434}{445}
+%
+If the process is complete, the two mutexes are unlocked~(in the reverse order
+of locking to prevent deadlocks) and the thread exits.  If the process is not
+complete but the currently-executing thread is the only remaining thread awake,
+it sets the completion status to true before unlocking the two previously
+locked mutexes.
+%
+\clst{446}{457}
+%
+As it is the only thread not sleeping, the executing thread serially wakes the
+remaining threads before exiting.
+
+For the case that a thread is not the last one awake and the search process is
+not complete, it~(safely) increments the number of sleeping threads.  It next
+locks the mutex protecting its sleeping state and safely checks the completion
+state to ensure that the search hasn't completed since its last check.  This
+prevents a thread from entering an eternal sleep.
+%
+\clst{458}{486}
+%
+If the search still has not completed then the thread waits for
+a~\ttt{wake\_up} signal, essentially putting it to sleep until another thread
+wakes it.  Upon waking, a thread will either exit if the search is complete or
+decrement the number of sleeping threads and continue from the beginning of the
+loop once again.
+
 \section{Results}
 \begin{figure}[H]
 \centering
@@ -206,23 +292,21 @@ the execution time, and prints its final search results and execution time.
 
 \section{Scripts}
 \subsection{Data Acquisition}
-\lstset{ language=bash }
 \begin{center}
 	\parbox{.85\textwidth}{
-	\lstinputlisting{../data/getData.sh}}
+	\lstinputlisting[language=bash]{../data/getData.sh}}
 \end{center}
 
 \subsection{Data Processing}
 \begin{center}
 	\parbox{.85\textwidth}{
-	\lstinputlisting{../data/processData.sh}}
+	\lstinputlisting[language=bash]{../data/processData.sh}}
 \end{center}
 
 \subsection{Data Calculation}
-\lstset{ language=python }
 \begin{center}
 	\parbox{.85\textwidth}{
-	\lstinputlisting{../data/calcData.py}}
+	\lstinputlisting[language=python]{../data/calcData.py}}
 \end{center}
 \end{document}
 
