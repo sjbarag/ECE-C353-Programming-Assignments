@@ -1,5 +1,4 @@
 int MAX_THREADS;
-int num_threads;
 int number_sleeping = 0;
 int all_done = 0;
 int spawned = 0;

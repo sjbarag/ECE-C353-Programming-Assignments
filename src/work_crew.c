@@ -33,9 +33,6 @@ int main(int argc, char** argv)
 	else
 		MAX_THREADS = 8;
 
-
-	threads = (pthread_t *)malloc(sizeof(pthread_t)*MAX_THREADS);
-
 	// Perform a serial search of the file system
 	RET_TYPE *a = search_for_string_serial(argv);
 
@@ -177,16 +174,17 @@ RET_TYPE* search_for_string_serial(char **argv)
 		/* Stop timer here and determine the elapsed time. */
 		struct timeval stop;
 		gettimeofday(&stop, NULL);
-		printf("\n \n \n");
-		printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
-		printf("The string %s was found %d times within the file system. \n", argv[1], num_occurrences);
 
-		printf("====================\n\n");
-
-
+		/* create return value */
 		RET_TYPE *out = (RET_TYPE *)malloc(sizeof(RET_TYPE));
 		out->time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
 		out->count = num_occurrences;
+
+		/* print results */
+		printf("\n \n \n");
+		printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+		printf("The string %s was found %d times within the file system. \n", argv[1], num_occurrences);
+		printf("====================\n\n");
 
 		return out;
 }
@@ -195,22 +193,28 @@ RET_TYPE* search_for_string_serial(char **argv)
  * file system starting from the specified path name. */
 RET_TYPE* search_for_string_mt(char **argv)
 {
+	/* allocate space for threads */
+	threads = (pthread_t *)malloc(sizeof(pthread_t)*MAX_THREADS);
+
+	/* initialize mutexes */
 	pthread_mutex_t queue_mutex, count_mutex;
-	pthread_mutex_init( &queue_mutex, NULL);
-	pthread_mutex_init( &count_mutex, NULL);
-
-	pthread_cond_init( &wake_up, NULL );
+	pthread_mutex_init( &queue_mutex, NULL );
+	pthread_mutex_init( &count_mutex, NULL );
 	pthread_mutex_init( &num_sleeping, NULL );
-
 	pthread_mutex_init( &done, NULL );
 
+	pthread_cond_init( &wake_up, NULL );
+
+	/* create mutex array */
 	sleepers = (pthread_mutex_t *)malloc( sizeof(pthread_mutex_t)*MAX_THREADS );
 	for( int i = 0; i < MAX_THREADS; i ++ )
 		pthread_mutex_init( &sleepers[i], NULL );
 
+	/* initialize count */
 	int count = 0;
 	int *p_count = &count;
 
+	/* create and fill thread arguments */
 	THREAD_ARGS *t_args;
 
 	t_args = (THREAD_ARGS *)malloc(sizeof(THREAD_ARGS));
@@ -221,39 +225,35 @@ RET_TYPE* search_for_string_mt(char **argv)
 	t_args->num_occurrences = p_count;
 	t_args->argv = argv;
 
-
-	num_threads = 0;
-
+	/* start timer */
 	struct timeval start;
 	gettimeofday(&start, NULL);
 
-	if( pthread_create( &threads[0], NULL, worker_thread, (void *)t_args ) == 0 )
-	{
-		pthread_mutex_lock( &queue_mutex );
-		num_threads++;
-		pthread_mutex_unlock( &queue_mutex );
-	}
-	else
+	/* spawn thread */
+	if( pthread_create( &threads[0], NULL, worker_thread, (void *)t_args ) != 0 )
 	{
 		printf("E: could not create thread! Exiting\n");
 		exit(-1);
 	}
 
+	/* wait for all threads to return */
 	for( int i = 0; i < MAX_THREADS; i++ )
 		pthread_join( threads[i], NULL );
 
+	/* stop timer */
 	struct timeval stop;
 	gettimeofday(&stop, NULL);
 
-
-	printf("\n \n \n");
-	printf("Overall execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
-	printf("The string %s was found %d times within the file system. \n", argv[1], count);
-	printf("====================\n\n");
-
+	/* create return value */
 	RET_TYPE *out = (RET_TYPE *)malloc(sizeof(RET_TYPE));
 	out->time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
 	out->count = count;
+
+	/* print results */
+	printf("\n \n \n");
+	printf("Overall execution time = %fs. \n", out->time);
+	printf("The string %s was found %d times within the file system. \n", argv[1], count);
+	printf("====================\n\n");
 
 	return out;
 }
@@ -267,7 +267,8 @@ void *worker_thread( void *args )
 	int status;
 	DIR *directory = NULL;
 	struct dirent *result = NULL;
-	struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH); // Allocate memory for the directory structure
+	/* allocate memory for the directory structure */
+	struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
 
 	/* initialize queue if on thread zero */
 	if( l_args->threadID == 0 )
@@ -282,7 +283,8 @@ void *worker_thread( void *args )
 		}
 		strcpy(element->path_name, l_args->argv[2]);
 		element->next = NULL;
-		insert_in_queue(l_args->queue, element); // Insert the initial path name into the queue
+		/* Insert the initial path name into the queue */
+		insert_in_queue(l_args->queue, element);
 	}
 
 
@@ -375,9 +377,10 @@ void *worker_thread( void *args )
 					insert_in_queue(l_args->queue, new_element);
 					pthread_mutex_unlock( l_args->mutex_queue );
 
-					/* wake up others */
-					for( int i = 0; i < MAX_THREADS; i++ )
-						pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
+					/* wake up others
+					 * man, pthread_broadcast never works for me */
+					for( int i = 0; i < MAX_THREADS-1; i++ )
+						pthread_cond_signal( &wake_up );
 				}
 				closedir(directory);
 			}
@@ -433,6 +436,7 @@ void *worker_thread( void *args )
 			pthread_mutex_unlock( l_args->mutex_queue );
 			pthread_mutex_lock( &num_sleeping );
 			pthread_mutex_lock( &done );
+
 			if( all_done == 1 )
 			{
 				pthread_mutex_unlock( &done );
@@ -444,12 +448,11 @@ void *worker_thread( void *args )
 				all_done = 1;
 				pthread_mutex_unlock( &done );
 				pthread_mutex_unlock( &num_sleeping );
-				// wake everyone up
 
-				printf("D/%d: Waking everyone up.\n", l_args->threadID);
-				for( int i = 0; i < MAX_THREADS; i++ )
-					pthread_cond_signal( &wake_up ); // man, pthread_broadcast never works for me
-				printf("D/%d: Exiting.\n", l_args->threadID);
+				/* wake everyone up
+				 * man, pthread_broadcast never works for me */
+				for( int i = 0; i < MAX_THREADS-1; i++ )
+					pthread_cond_signal( &wake_up );
 				pthread_exit( 0 );
 			}
 			else
@@ -459,10 +462,8 @@ void *worker_thread( void *args )
 				number_sleeping ++;
 				pthread_mutex_unlock( &num_sleeping );
 
-
 				/* sleep */
 				pthread_mutex_lock( &sleepers[l_args->threadID] );
-				printf("D/%d: sleeping.\n", l_args->threadID);
 				pthread_mutex_lock( &done ); // check done status just before sleeping
 				if( all_done == 1 )
 				{
@@ -472,16 +473,11 @@ void *worker_thread( void *args )
 				}
 				pthread_mutex_unlock( &done );
 				pthread_cond_wait( &wake_up, &sleepers[l_args->threadID] );
-				printf("D/%d: awake: ", l_args->threadID);
 				pthread_mutex_unlock( &sleepers[l_args->threadID] );
 				if( all_done == 1 )
-				{
-					printf("woken to exit.\n");
 					pthread_exit(0);
-				}
 				else
 				{
-					printf("woken to continue.\n");
 					pthread_mutex_lock( &num_sleeping);
 					number_sleeping --;
 					pthread_mutex_unlock( &num_sleeping );
