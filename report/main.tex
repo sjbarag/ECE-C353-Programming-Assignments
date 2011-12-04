@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage{gnuplot-lua-tikz}
 \usepackage{subfig}
+\usepackage{siunitx}
 \usepackage{float}
 \usepackage{siunitx}
 
@@ -51,6 +52,7 @@
 \setcounter{tocdepth}{5}
 
 \newcommand{\ttt}[1]{\texttt{#1}}
+\newcommand{\tbf}[1]{\textbf{#1}}
 
 \title{ECE-C353: Systems Programming \\ Final Project}
 \author{Sean Barag \\ \ttt{<sjb89@drexel.edu>}}
@@ -284,10 +286,55 @@ decrement the number of sleeping threads and continue from the beginning of the
 loop once again.
 
 \section{Results}
+Initial testing of the single- and multi-threaded implementations was tested on
+my local development machine, but the final data was acquired through the
+College of Engineering's Linux cluster.  A recursive search beginning
+at~\ttt{/home/DREXEL/nk78} for the string~``Kandasamy'' was performed one
+hundred times for maximum thread counts of one, two, four, and eight.  By
+acquiring the data at roughly~2:00~PM on Thanksgiving Day, the number of
+processes contending for the cluster's CPU's was minimized.  The resulting
+average, minimum, and maximum execution times are plotted in
+Figure~\ref{f:plot} and tabulated in Table~\ref{t:data}.
+%
 \begin{figure}[H]
 \centering
 	\input{img/plot/multiThreadPlot.tex}
+	\parbox{.6\textwidth}{
+	\caption{Mean, minimum, and maximum execution times from a set of~100 tests
+	executed on~\ttt{xunil-01}.}
+	\label{f:plot}}
 \end{figure}
+%
+As is shown, there is a nearly exponential decay in mean execution time over
+the range from one to eight threads, causing the average value to decrease
+from~\SI{13.09}{\second} to~\SI{3.15}{\second}.  This falls very much in line
+with one's expectations about parallelizing an algorithm such as the one used
+here.  Single threaded, it takes roughly~$O(n)$ time; by adding~$i$ additional
+threads, this drops to~$O(\frac{n}{i+1})$, as each thread can
+contribute~$\frac{1}{i+1}$ of the work in a well-balanced program.
+%
+\begin{table}[H]
+\centering
+	\input{tbl.tex}
+	\parbox{.6\textwidth}{
+	\caption{Data used to generate the plot in Figure~\ref{f:plot}.}
+	\label{t:data}}
+\end{table}
+%
+There is however a discontinuity to this nearly exponential decay, located
+where the search was performed with~16 threads.  Intuition states that this
+test case would perform~\emph{better} than any of the cases with fewer threads,
+but this is clearly not the case.  Such a slow down is most likely caused by
+the added contention for mutexes introduced by multi-threading the process.
+All of the threads share a mutex protecting the completion status, one
+protecting the number of sleeping threads, and most importantly, a single work
+queue.  As a result, only one thread can read from or post to the work queue at
+a time (similarly with checking or setting the completion status or the number
+of sleeping threads).  As the number of threads increases, the contention for
+these limited resources becomes a bottleneck on the overall performance,
+eventually resulting in threads that spend more time waiting for shared
+resources than actually doing work.
+
 \appendix
 
 \section{Scripts}
