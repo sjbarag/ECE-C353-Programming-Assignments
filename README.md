@@ -8,9 +8,9 @@ Should GNU `make` not work for you, the following command should be sufficient:
     gcc -std=c99 -lpthead -o out/work_crew src/work_crew.c src/queue_utils.c
 
 #### Running
-The program can be executed with `make run` after changing the values of `DIR`
-and `STRING` to appropriate values.  If GNU `make` is not available or you just
-want to run the application directly, you can simply run:
+The program can be executed with `make run` after changing `DIR` and `STRING`
+to appropriate values.  If GNU `make` is not available or you just want to run
+the application directly, you can simply run:
 
     out/work_crew string directory
 
