@@ -1,6 +1,6 @@
 .PHONY: clean
 CC = gcc
-CFLAGS  = -std=c99 -g -lpthread
+CFLAGS  = -std=c99 -lpthread
 OUTDIR  = out/
 SRC_1   = src/work_crew.c
 SRC_2   = src/queue_utils.c
