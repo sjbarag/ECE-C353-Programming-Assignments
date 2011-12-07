@@ -12,7 +12,7 @@ The program can be executed with `make run` after changing `DIR` and `STRING`
 to appropriate values.  If GNU `make` is not available or you just want to run
 the application directly, you can simply run:
 
-    out/work_crew string directory
+    out/work_crew <string> <directory>
 
 #### Example Output
 Because the output for this application is mostly system dependant, it is not
