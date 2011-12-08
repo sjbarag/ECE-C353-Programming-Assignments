@@ -46,6 +46,13 @@
 	\end{center}
 }
 
+\newcommand{\chompclst}[2]{
+	\begin{center}
+	\parbox{.6\textwidth}{
+	\lstinputlisting[firstline=#1, lastline=#2, firstnumber=#1]{chomped.c}}
+	\end{center}
+}
+
 % I NEED SUBSUBSUBSECTIONS (``paragraphs''), DAMMIT
 \setcounter{secnumdepth}{5}
 % Force TOC to descend 5 levels
@@ -201,7 +208,7 @@ the execution time, and prints its final search results and execution time.
 Each thread begins simply by casting the arguments of~\ttt{worker\_thread} from
 void~(as required by the pthread libraries) back to type~\ttt{THREAD\_ARGS}.
 %
-\clst{263}{271}
+\chompclst{1}{9}
 %
 As in the single-threaded case, two queue elements are first declared as well
 as the relevant objects for any directory information that will be encountered.
@@ -209,7 +216,7 @@ as the relevant objects for any directory information that will be encountered.
 If the calling thread is the first one spawned~(i.e. with a \ttt{threadID} of
 zero), the shared work queue is allocated and initialized.
 %
-\clst{274}{288}
+\chompclst{12}{27}
 %
 While this could have also been performed before any threads were spawned, it
 was included here in the interest of clarity.  Testing for the thread's ID
@@ -226,7 +233,7 @@ Each thread begins by removing the first item of the queue.  Because all threads
 and modify the same queue, the mutex referenced by~\ttt{mutex\_queue} must be
 locked prior to access and unlocked after in order to prevent conflicts.
 %
-\clst{291}{298}
+\chompclst{30}{37}
 %
 While the single-threaded implementation tested the state of the queue in
 the~\ttt{while} loop's condition, the test was moved to the first operation
@@ -235,7 +242,7 @@ inside the loop so that the queue could be properly protected by its mutexes.
 The next change occurs when the end of a directory is reached, in which the
 initial thread spawns its siblings.
 %
-\clst{329}{355}
+\chompclst{40}{66}
 %
 Each thread tests its ID and whether or not the extra threads have been
 spawned.  If it is thread zero and the sibling threads haven't been created~(as
@@ -245,7 +252,7 @@ of~\ttt{THREAD\_ARGS} is created and filled prior to each thread's creation.
 For each new element reached by a thread, the queue must be locked and
 subsequently unlocked in order to contribute to the work queue.
 %
-\clst{370}{383}
+\chompclst{69}{77}
 %
 Once the newly constructed queue element has been added and the queue unlocked,
 all remaining threads are woken up with an iterated call
@@ -258,7 +265,7 @@ In the event that the queue is empty, a thread simply unlocks the queue's mutex
 and locks the mutexes protecting the number of sleeping threads and the
 completion status.
 %
-\clst{434}{445}
+\chompclst{85}{96}
 %
 If the process is complete, the two mutexes are unlocked~(in the reverse order
 of locking to prevent deadlocks) and the thread exits.  If the process is not
@@ -266,7 +273,7 @@ complete but the currently-executing thread is the only remaining thread awake,
 it sets the completion status to true before unlocking the two previously
 locked mutexes.
 %
-\clst{446}{457}
+\chompclst{99}{110}
 %
 As it is the only thread not sleeping, the executing thread serially wakes the
 remaining threads before exiting.
@@ -277,7 +284,7 @@ locks the mutex protecting its sleeping state and safely checks the completion
 state to ensure that the search hasn't completed since its last check.  This
 prevents a thread from entering an eternal sleep.
 %
-\clst{458}{486}
+\chompclst{113}{141}
 %
 If the search still has not completed then the thread waits for
 a~\ttt{wake\_up} signal, essentially putting it to sleep until another thread
