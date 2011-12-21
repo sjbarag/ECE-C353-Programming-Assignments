@@ -127,8 +127,3 @@ CPU run time (thread)    = 0.32 s.
 Difference between the reference and pthread results: 0.000000.
 Scriptable output:       100000000       0.60    0.32
 ```
-
-#### Other
-The source code for this project (including this README) is available on
-[GitHub](github.com/sjbarag/ECE-C353-Programming-Assignment-4).
-

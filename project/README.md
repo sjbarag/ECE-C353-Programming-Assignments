@@ -21,8 +21,3 @@ output a table of the following form:
 
                          Threads    Single    Multi    Match
     Scriptable Output:        8    3.292550  3.16328   true
-
-#### Other
-The source code for this project (including this README) is available on
-[GitHub](github.com/sjbarag/ECE-C353-Programming-Assignment-4).
-

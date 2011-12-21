@@ -46,8 +46,3 @@ Product:
 81      81      111
 
 ```
-
-#### Other
-The source code for this project (including this README) is available on
-[GitHub](github.com/sjbarag/ECE-C353-Programming-Assignment-2).
-
