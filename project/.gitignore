@@ -1,0 +1,9 @@
+out/
+.*.sw?
+core
+report/*.log
+report/*.aux
+report/*.fdb_latexmk
+report/*.lof
+report/*.toc
+report.pdf
